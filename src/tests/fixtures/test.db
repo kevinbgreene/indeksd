@@ -1,0 +1,18 @@
+type Value = 1 | 2 | 3;
+type Value2 = '1' | true | 0.2;
+type Value3 = Value | false;
+type Value4 = 'some';
+
+database MyDatabase {
+
+  table Author {
+    @autoincrement id: number;
+    name: string;
+  }
+
+  table Posts {
+    name: string;
+    author: Author;
+  }
+
+}

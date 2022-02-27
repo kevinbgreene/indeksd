@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "es2021",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "declaration": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "noEmitOnError": true,
+    "strict": true,
+    "noUnusedLocals": false,
+    "pretty": true
+  },
+  "exclude": ["node_modules", "dist"]
+}
