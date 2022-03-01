@@ -8,11 +8,12 @@ database MyDatabase {
   table Author {
     @autoincrement id: number;
     name: string;
+    @unique email: string;
   }
 
   table Posts {
     name: string;
-    author: Author;
+    content: string;
   }
 
 }

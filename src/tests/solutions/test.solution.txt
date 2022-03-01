@@ -1,0 +1,19 @@
+export type Value = 1 | 2 | 3;
+export type Value2 = "1" | true | 0.2;
+export type Value3 = Value | false;
+export type Value4 = "some";
+function init(): void {
+  return new Promise((resolve, reject) => {
+    const DBOpenRequest = globalThis.open("MyDatabase");
+    let db;
+    DBOpenRequest.onerror = (event) => {
+      reject('Error loading database: ' + 'MyDatabase');
+    };
+    DBOpenRequest.onsuccess = (event) => {
+      db = DBOpenRequest.result;
+    };
+    DBOpenRequest.onupgradeneeded = (event) => {
+      db = DBOpenRequest.result;
+    };
+  })
+}
