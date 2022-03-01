@@ -7,8 +7,6 @@ const content = loadSource('test');
 const scanner: Scanner = createScanner(content);
 const tokens: Array<Token> = scanner.scan();
 
-console.log({ tokens });
-
 const expected: Array<Token> = [];
 
 assert.deepEqual(tokens, expected);
