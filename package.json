@@ -1,7 +1,7 @@
 {
   "name": "indeksd",
   "version": "1.0.0",
-  "description": "",
+  "description": "A DSL for defining IndexedDB schemas that compiles into a TypeScript implementation of simplified IndexedDB client.",
   "main": "./dist/main/index.js",
   "bin": {
     "indeksd": "./dist/main/bin/index.js"
