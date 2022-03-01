@@ -1,7 +1,9 @@
-import { IDbProject, IGeneratedFile, IParsedFile } from '../types';
+import { IIndeksdProject, IGeneratedFile, IParsedFile } from '../types';
 import { processDefinitions } from './iterator';
 
-export function generateProject(project: IDbProject): Array<IGeneratedFile> {
+export function generateProject(
+  project: IIndeksdProject,
+): Array<IGeneratedFile> {
   let result: Array<IGeneratedFile> = [];
 
   project.files.forEach((file: IParsedFile) => {

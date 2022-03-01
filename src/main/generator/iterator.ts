@@ -7,6 +7,7 @@ export function renderDefinition(def: Definition): Array<ts.Statement> {
     case 'TypeDefinition':
       return [renderer.renderTypeDefinition(def)];
     case 'DatabaseDefinition':
+      return [renderer.renderDatabaseDefinition(def)];
     case 'TableDefinition':
       return [];
     default:

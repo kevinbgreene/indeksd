@@ -1,8 +1,8 @@
 import * as ts from 'typescript';
 import { Definition } from './parser';
 
-export interface IDbProject {
-  type: 'DbProject';
+export interface IIndeksdProject {
+  type: 'IndeksdProject';
 
   // Root directory for the project
   rootDir: string;

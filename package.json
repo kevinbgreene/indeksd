@@ -1,10 +1,10 @@
 {
-  "name": "storage",
+  "name": "indeksd",
   "version": "1.0.0",
   "description": "",
   "main": "./dist/main/index.js",
   "bin": {
-    "storage": "./dist/main/bin/index.js"
+    "indeksd": "./dist/main/bin/index.js"
   },
   "scripts": {
     "format": "prettier --write 'src/**/*.ts'",

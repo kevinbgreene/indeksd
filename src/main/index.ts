@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 import { mergeWithDefaults } from './defaults';
 import {
-  IDbProject,
+  IIndeksdProject,
   IGeneratedFile,
   IMakeOptions,
   IParsedFile,
@@ -41,7 +41,7 @@ export function make(
     source,
   };
 
-  const project: IDbProject = projectFromSourceFiles(
+  const project: IIndeksdProject = projectFromSourceFiles(
     [sourceFile],
     mergedOptions,
   );
@@ -76,7 +76,7 @@ export async function readProjectFiles(options: {
 export function projectFromSourceFiles(
   sourceFiles: Array<ISourceFile>,
   options: Partial<IMakeOptions> = {},
-): IDbProject {
+): IIndeksdProject {
   const mergedOptions: IMakeOptions = mergeWithDefaults(options);
 
   // Root at which we operate relative to
@@ -93,7 +93,7 @@ export function projectFromSourceFiles(
   );
 
   return {
-    type: 'DbProject',
+    type: 'IndeksdProject',
     rootDir,
     outDir,
     sourceDir,
@@ -104,7 +104,7 @@ export function projectFromSourceFiles(
 
 export async function processProject(
   options: Partial<IMakeOptions> = {},
-): Promise<IDbProject> {
+): Promise<IIndeksdProject> {
   const mergedOptions: IMakeOptions = mergeWithDefaults(options);
 
   // Root at which we operate relative to
@@ -125,8 +125,7 @@ export async function processProject(
 export async function generate(
   options: Partial<IMakeOptions> = {},
 ): Promise<void> {
-  const project: IDbProject = await processProject(options);
-
+  const project: IIndeksdProject = await processProject(options);
   const generatedFiles: Array<IGeneratedFile> = generateProject(project);
 
   saveFiles(generatedFiles, project.outDir);

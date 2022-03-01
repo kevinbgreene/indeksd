@@ -1,6 +1,6 @@
 import * as ts from 'typescript';
-import { FieldType, TypeDefinition } from '../parser/types';
-import { typeNodeForFieldType } from './types';
+import { DatabaseDefinition, FieldType, TypeDefinition } from '../parser/types';
+import { createVoidType, typeNodeForFieldType } from './types';
 
 export function renderTypeDefinition(def: TypeDefinition): ts.Statement {
   return ts.factory.createTypeAliasDeclaration(
@@ -13,5 +13,20 @@ export function renderTypeDefinition(def: TypeDefinition): ts.Statement {
         return typeNodeForFieldType(next);
       }),
     ]),
+  );
+}
+
+export function renderDatabaseDefinition(
+  def: DatabaseDefinition,
+): ts.Statement {
+  return ts.factory.createFunctionDeclaration(
+    undefined,
+    undefined,
+    undefined,
+    `make${def.name.value}`,
+    undefined,
+    [],
+    createVoidType(),
+    ts.factory.createBlock([], true),
   );
 }
