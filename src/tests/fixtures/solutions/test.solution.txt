@@ -1,0 +1,24 @@
+export type Value = 1 | 2 | 3;
+export type Value2 = "1" | true | 0.2;
+export type Value3 = Value | false;
+export type Value4 = "some";
+function createDatabaseClient() {
+}
+function init(): Promise {
+    return new Promise((resolve, reject) => {
+        const DBOpenRequest = globalThis.open("MyDatabase");
+        DBOpenRequest.onerror = event => {
+            reject("Error opening database: MyDatabase");
+        };
+        DBOpenRequest.onsuccess = event => {
+            const db = DBOpenRequest.result;
+        };
+        DBOpenRequest.onupgradeneeded = event => {
+            const db = DBOpenRequest.result;
+            const AuthorStore = db.createObjectStore("Author", { keyPath: "id" });
+            const PostsStore = db.createObjectStore("Posts", {});
+            AuthorStore.createIndex("name", "name", { unique: false });
+            PostsStore.createIndex("name", "name", { unique: false });
+        };
+    });
+}

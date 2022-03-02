@@ -47,7 +47,7 @@ export function typeNodeForFieldType(fieldType: FieldType): ts.TypeNode {
 
     case 'BooleanLiteral':
       return ts.factory.createLiteralTypeNode(
-        fieldType.value ? ts.factory.createTrue() : ts.factory.createFalse(),
+        createBooleanLiteral(fieldType.value),
       );
 
     default:
@@ -99,4 +99,8 @@ export function createTypeProperty(
     undefined, // question token if optional
     type, // type of property
   );
+}
+
+export function createBooleanLiteral(val: boolean): ts.BooleanLiteral {
+  return val ? ts.factory.createTrue() : ts.factory.createFalse();
 }

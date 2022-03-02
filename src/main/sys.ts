@@ -6,11 +6,9 @@ import { IGeneratedFile } from './types';
 
 export function saveFiles(files: Array<IGeneratedFile>, outDir: string): void {
   files.forEach((next: IGeneratedFile) => {
-    const outPath: string = path.resolve(
-      outDir,
-      next.path,
-      `${next.name}.${next.ext}`,
-    );
+    console.log({ next });
+
+    const outPath: string = path.resolve(outDir, `${next.name}.${next.ext}`);
 
     try {
       fs.outputFileSync(outPath, print(next.body, true));

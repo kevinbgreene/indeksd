@@ -1,6 +1,6 @@
 {
   "name": "indeksd",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A DSL for defining IndexedDB schemas that compiles into a TypeScript implementation of simplified IndexedDB client.",
   "main": "./dist/main/index.js",
   "bin": {
@@ -12,7 +12,8 @@
     "clean:all": "npm run clean -- node_modules",
     "prebuild": "npm run clean && npm run format",
     "build": "tsc",
-    "pretest": "npm run build",
+    "move:fixtures": "rimraf dist/tests/fixtures && cp -r src/tests/fixtures dist/tests/fixtures",
+    "pretest": "npm run build && npm run move:fixtures",
     "test": "node ./dist/tests/index.test.js"
   },
   "author": "Kevin Greene",

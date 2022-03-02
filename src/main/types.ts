@@ -10,7 +10,7 @@ export interface IIndeksdProject {
   // Output directory (relative to root) for generated code
   outDir: string;
 
-  // Source directory (relative to root) for thrift files
+  // Source directory (relative to root) for schema files
   sourceDir: string;
 
   // Array of parsed source files
@@ -72,7 +72,7 @@ export interface IMakeOptions {
   // Where to put generated TypeScript
   outDir: string;
 
-  // Where to find source thrift
+  // Where to find source schema files
   sourceDir: string;
 
   // Files to generate from

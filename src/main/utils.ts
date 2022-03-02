@@ -67,8 +67,8 @@ export function deepMerge<Base extends object, Update extends object>(
 
 export function collectSourceFiles(
   sourceDir: string,
-  files?: Array<string>,
-): Array<string> {
+  files?: ReadonlyArray<string>,
+): ReadonlyArray<string> {
   if (files && files.length > 0) {
     return files;
   } else {

@@ -42,12 +42,12 @@ function parseSchemaFromSource(
 }
 
 function parseSchemaFile(file: ISourceFile): IParsedFile {
-  const thriftDoc: DatabaseSchema = parseSchemaString(file.source);
+  const schema: DatabaseSchema = parseSchemaString(file.source);
 
   return {
     type: 'ParsedFile',
     sourceFile: file,
-    body: thriftDoc.body,
+    body: schema.body,
     errors: false,
   };
 }

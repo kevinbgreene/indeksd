@@ -75,7 +75,6 @@ export function createParser(tokens: Array<Token>): Parser {
 
     console.log({ next });
 
-    // All Thrift statements must start with one of these types
     switch (next.type) {
       case 'DatabaseKeyword':
         return parseDatabaseDefinition();
@@ -293,6 +292,7 @@ export function createParser(tokens: Array<Token>): Parser {
     return {
       type: 'FieldDefinition',
       name: factory.createIdentifier(nameToken.text, nameToken.loc),
+      annotation,
       fieldType,
       loc: location,
     };

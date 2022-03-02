@@ -7,12 +7,12 @@ database MyDatabase {
 
   table Author {
     @autoincrement id: number;
-    name: string;
+    @index name: string;
     @unique email: string;
   }
 
   table Posts {
-    name: string;
+    @index name: string;
     content: string;
   }
 

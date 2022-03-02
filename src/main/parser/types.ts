@@ -80,7 +80,7 @@ export interface Annotation extends SyntaxNode {
 
 export interface FieldDefinition extends SyntaxNode {
   type: 'FieldDefinition';
-  annotation?: Annotation;
+  annotation: Annotation | null;
   name: Identifier;
   fieldType: FieldType;
 }

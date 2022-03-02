@@ -35,7 +35,7 @@ export function make(
 
   const sourceFile: ISourceFile = {
     type: 'SourceFile',
-    name: 'source.thrift',
+    name: 'source.db',
     path: '',
     fullPath: '',
     source,
@@ -54,27 +54,30 @@ export function make(
 export async function readProjectFiles(options: {
   rootDir: string;
   sourceDir: string;
-  files?: Array<string>;
-}): Promise<Array<ISourceFile>> {
+  files?: ReadonlyArray<string>;
+}): Promise<ReadonlyArray<ISourceFile>> {
   // Root at which we operate relative to
   const rootDir: string = path.resolve(process.cwd(), options.rootDir);
 
   // Where do we read source files
   const sourceDir: string = path.resolve(rootDir, options.sourceDir);
 
-  const fileNames: Array<string> = collectSourceFiles(sourceDir, options.files);
+  const fileNames: ReadonlyArray<string> = collectSourceFiles(
+    sourceDir,
+    options.files,
+  );
 
-  const thriftFiles: Array<ISourceFile> = await Promise.all(
+  const sourceFiles: ReadonlyArray<ISourceFile> = await Promise.all(
     fileNames.map((next: string) => {
       return readSourceFile(next, [sourceDir]);
     }),
   );
 
-  return thriftFiles;
+  return sourceFiles;
 }
 
 export function projectFromSourceFiles(
-  sourceFiles: Array<ISourceFile>,
+  sourceFiles: ReadonlyArray<ISourceFile>,
   options: Partial<IMakeOptions> = {},
 ): IIndeksdProject {
   const mergedOptions: IMakeOptions = mergeWithDefaults(options);
@@ -113,11 +116,13 @@ export async function processProject(
   // Where do we read source files
   const sourceDir: string = path.resolve(rootDir, mergedOptions.sourceDir);
 
-  const sourceFiles: Array<ISourceFile> = await readProjectFiles({
+  const sourceFiles: ReadonlyArray<ISourceFile> = await readProjectFiles({
     rootDir,
     sourceDir,
     files: mergedOptions.files,
   });
+
+  console.log({ sourceFiles });
 
   return projectFromSourceFiles(sourceFiles, mergedOptions);
 }
@@ -126,6 +131,7 @@ export async function generate(
   options: Partial<IMakeOptions> = {},
 ): Promise<void> {
   const project: IIndeksdProject = await processProject(options);
+  console.log({ project });
   const generatedFiles: Array<IGeneratedFile> = generateProject(project);
 
   saveFiles(generatedFiles, project.outDir);
