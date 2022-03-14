@@ -15,6 +15,7 @@ import {
 } from './types';
 
 import * as factory from '../factory';
+import { StringLiteral } from '.';
 
 export interface Parser {
   parse(): DatabaseSchema;
@@ -221,17 +222,50 @@ export function createParser(tokens: Array<Token>): Parser {
     };
   }
 
+  function parseAnnotations(): ReadonlyArray<Annotation> {
+    const annotations = [];
+
+    while (!check('Identifier')) {
+      const annotation = parseAnnotation();
+      if (annotation) {
+        annotations.push(annotation);
+      }
+
+      if (isStartOfDefinition(currentToken())) {
+        throw reportError(
+          `Closing paren ')' expected, but new definition found`,
+        );
+      } else if (check('EOF')) {
+        throw reportError(`Closing paren ')' expected but reached end of file`);
+      }
+    }
+
+    return annotations;
+  }
+
+  // ListSeparator → ','
+  function readListSeparator(): Token | null {
+    if (check('CommaToken')) {
+      return advance();
+    }
+
+    return null;
+  }
+
   // Annotation → '@' Identifier
   function parseAnnotation(): Annotation | null {
-    const atToken: Token | null = consume('AtToken');
-    if (atToken == null) {
-      return null;
-    }
+    const _atToken: Token | null = consume('AtToken');
+    const atToken: Token = requireValue(
+      _atToken,
+      `Unable to find identifier for field`,
+    );
 
     const nameToken: Token = requireValue(
       consume('Identifier'),
       `Annotation must have a name`,
     );
+
+    // const args = parseAnnotationArgs();
 
     return {
       kind: 'Annotation',
@@ -239,6 +273,14 @@ export function createParser(tokens: Array<Token>): Parser {
       loc: factory.createTextLocation(atToken.loc.start, nameToken.loc.end),
     };
   }
+
+  // function parseAnnotationArgs(): ReadonlyArray<string> {
+  //   const openParen: Token | null = consume('RightParenToken');
+  //   if (openParen == null) {
+  //     return [];
+  //   }
+
+  // }
 
   function parseFields(): Array<FieldDefinition> {
     const fields: Array<FieldDefinition> = [];
@@ -263,7 +305,7 @@ export function createParser(tokens: Array<Token>): Parser {
   // Field → ?Annotation Identifier ':' TypeNode ';'
   function parseField(): FieldDefinition {
     const startLoc: TextLocation = currentToken().loc;
-    const annotation: Annotation | null = parseAnnotation();
+    const annotations: ReadonlyArray<Annotation> = parseAnnotations();
     const _nameToken: Token | null = consume('Identifier');
     const nameToken: Token = requireValue(
       _nameToken,
@@ -290,7 +332,7 @@ export function createParser(tokens: Array<Token>): Parser {
     return {
       kind: 'FieldDefinition',
       name: factory.createIdentifier(nameToken.text, nameToken.loc),
-      annotation,
+      annotations,
       type,
       loc: location,
     };

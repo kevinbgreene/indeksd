@@ -12,7 +12,11 @@ import {
 } from './client';
 import { createGetArgsType } from './client/getMethod';
 import { createConstStatement, createParameterDeclaration } from './helpers';
-import { autoincrementFieldsForTable } from './keys';
+import {
+  annotationsInclude,
+  autoincrementFieldsForTable,
+  indexFieldsForTable,
+} from './keys';
 import { createBooleanLiteral } from './types';
 
 export function renderDatabaseDefinition(
@@ -188,19 +192,13 @@ function createIndexesForStore(
 }
 
 function optionsForIndex(def: FieldDefinition): ts.ObjectLiteralExpression {
-  const isFieldUnique = def.annotation?.name.value === 'unique';
+  const isFieldUnique = annotationsInclude(def.annotations, 'unique');
   return ts.factory.createObjectLiteralExpression([
     ts.factory.createPropertyAssignment(
       ts.factory.createIdentifier('unique'),
       createBooleanLiteral(isFieldUnique),
     ),
   ]);
-}
-
-function indexFieldsForTable(
-  def: TableDefinition,
-): ReadonlyArray<FieldDefinition> {
-  return def.body.filter((next) => next.annotation?.name.value === 'index');
 }
 
 function createDbAssignment(): ts.Statement {

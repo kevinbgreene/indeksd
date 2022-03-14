@@ -76,11 +76,12 @@ export interface FloatLiteral extends SyntaxNode {
 export interface Annotation extends SyntaxNode {
   kind: 'Annotation';
   name: Identifier;
+  // args: ReadonlyArray<string>;
 }
 
 export interface FieldDefinition extends SyntaxNode {
   kind: 'FieldDefinition';
-  annotation: Annotation | null;
+  annotations: ReadonlyArray<Annotation>;
   name: Identifier;
   type: TypeNode;
 }

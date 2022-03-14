@@ -5,13 +5,13 @@ type Value4 = 'some';
 
 database MyDatabase {
 
-  table Author {
+  table Authors @item("Author") {
     @autoincrement id: number;
     @index name: string;
-    @unique email: string;
+    @index @unique email: string;
   }
 
-  table Posts {
+  table Posts @item("Post") {
     @index name: string;
     content: string;
   }

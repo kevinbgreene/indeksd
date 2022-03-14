@@ -1,6 +1,9 @@
 import * as ts from 'typescript';
 import { DatabaseDefinition } from '../../parser';
+import { createVoidType } from '../types';
+import { capitalize } from '../utils';
 import { createAddRequestHandling } from './addMethod';
+import { createClientTypeNode } from './common';
 import { createGetObjectStore } from './objectStore';
 import { createTransactionWithMode } from './transaction';
 
@@ -26,9 +29,7 @@ export function createClientFunction(def: DatabaseDefinition): ts.Statement {
         ),
       ),
     ], // args
-    ts.factory.createTypeReferenceNode(
-      ts.factory.createIdentifier(def.name.value),
-    ), // return type
+    createClientTypeNode(def), // return type
     ts.factory.createBlock(
       [
         ts.factory.createReturnStatement(
@@ -43,8 +44,21 @@ export function createClientFunction(def: DatabaseDefinition): ts.Statement {
                       ts.factory.createArrowFunction(
                         undefined,
                         undefined,
-                        [],
-                        undefined,
+                        [
+                          ts.factory.createParameterDeclaration(
+                            undefined,
+                            undefined,
+                            undefined,
+                            ts.factory.createIdentifier('arg'),
+                            undefined,
+                            ts.factory.createTypeReferenceNode(
+                              capitalize(next.name.value),
+                            ),
+                          ),
+                        ],
+                        ts.factory.createTypeReferenceNode('Promise', [
+                          createVoidType(),
+                        ]),
                         undefined,
                         ts.factory.createBlock(
                           [

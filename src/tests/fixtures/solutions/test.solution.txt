@@ -2,9 +2,21 @@ export type Value = 1 | 2 | 3;
 export type Value2 = "1" | true | 0.2;
 export type Value3 = Value | false;
 export type Value4 = "some";
+type AuthorGetArgs = string | {
+    name: string;
+} | {
+    email: string;
+};
+type PostsGetArgs = {
+    name: string;
+};
 export type MyDatabaseClient = {
-    author: (arg: Author) => Promise<void>;
-    posts: (arg: Post) => Promise<void>;
+    author: {
+        add: (arg: Author) => Promise<void>;
+    };
+    posts: {
+        add: (arg: Posts) => Promise<void>;
+    };
 };
 function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
     return {
@@ -19,10 +31,10 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                 addRequest.onsuccess = event => {
                     resolve();
                 };
-            },
+            }
         },
         posts: {
-            add: (arg: Post): Promise<void> => {
+            add: (arg: Posts): Promise<void> => {
                 const tx = db.transaction(["Posts"], "readwrite");
                 const store = tx.objectStore("Posts");
                 const addRequest: IDBRequest = store.add(arg);
@@ -33,7 +45,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                     resolve();
                 };
             }
-        },
+        }
     };
 }
 export function init(): Promise<MyDatabaseClient> {
@@ -51,8 +63,8 @@ export function init(): Promise<MyDatabaseClient> {
             const AuthorStore = db.createObjectStore("Author", { keyPath: "id" });
             const PostsStore = db.createObjectStore("Posts", {});
             AuthorStore.createIndex("name", "name", { unique: false });
+            AuthorStore.createIndex("email", "email", { unique: true });
             PostsStore.createIndex("name", "name", { unique: false });
-            resolve(createDatabaseClient(db));
         };
     });
 }
