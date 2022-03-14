@@ -1,4 +1,4 @@
-import { Identifier, SyntaxType, TextLocation } from './parser';
+import { Identifier, TextLocation } from './parser';
 
 import * as glob from 'glob';
 
@@ -78,7 +78,7 @@ export function collectSourceFiles(
 
 export function stubIdentifier(value: string): Identifier {
   return {
-    type: 'Identifier',
+    kind: 'Identifier',
     value,
     loc: emptyLocation(),
   };

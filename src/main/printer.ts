@@ -25,7 +25,7 @@ function generatePreface(req: ts.Statement): void {
 }
 
 export function print(
-  statements: Array<ts.Statement>,
+  statements: ReadonlyArray<ts.Statement>,
   includePreface: boolean = false,
 ): string {
   const printer: ts.Printer = ts.createPrinter();

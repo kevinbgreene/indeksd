@@ -12,7 +12,7 @@ import { readSourceFile } from './reader';
 import { collectSourceFiles } from './utils';
 import { generateProject } from './generator';
 import { saveFiles } from './sys';
-import { processDefinitions } from './generator/iterator';
+import { renderDefinitions } from './renderer';
 import { print } from './printer';
 
 export interface ParseOptions {
@@ -46,9 +46,9 @@ export function make(
     mergedOptions,
   );
 
-  const defs: Array<Definition> = project.files[0].body;
+  const defs: ReadonlyArray<Definition> = project.files[0].body;
 
-  return print(processDefinitions(defs));
+  return print(renderDefinitions(defs));
 }
 
 export async function readProjectFiles(options: {

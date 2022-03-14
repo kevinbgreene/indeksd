@@ -1,5 +1,5 @@
 export interface Node {
-  type: SyntaxType;
+  kind: SyntaxKind;
 }
 
 export interface TextPosition {
@@ -24,23 +24,23 @@ export interface Token extends SyntaxNode {
 export type KeywordType = 'StringKeyword' | 'NumberKeyword' | 'BooleanKeyword';
 
 export interface BaseType extends SyntaxNode {
-  type: KeywordType;
+  kind: KeywordType;
 }
 
 export interface SetType extends SyntaxNode {
-  type: 'SetType';
-  valueType: FieldType;
+  kind: 'SetType';
+  valueType: TypeNode;
 }
 
 export interface ArrayType extends SyntaxNode {
-  type: 'ArrayType';
-  valueType: FieldType;
+  kind: 'ArrayType';
+  valueType: TypeNode;
 }
 
 export interface MapType extends SyntaxNode {
-  type: 'MapType';
-  keyType: FieldType;
-  valueType: FieldType;
+  kind: 'MapType';
+  keyType: TypeNode;
+  valueType: TypeNode;
 }
 
 export type ContainerType = SetType | MapType | ArrayType;
@@ -51,69 +51,69 @@ export type ValueType =
   | FloatLiteral
   | BooleanLiteral;
 
-export type FieldType = ValueType | BaseType | ContainerType | Identifier;
+export type TypeNode = ValueType | BaseType | ContainerType | Identifier;
 
 export interface StringLiteral extends SyntaxNode {
-  type: 'StringLiteral';
+  kind: 'StringLiteral';
   value: string;
 }
 
 export interface BooleanLiteral extends SyntaxNode {
-  type: 'BooleanLiteral';
+  kind: 'BooleanLiteral';
   value: boolean;
 }
 
 export interface IntegerLiteral extends SyntaxNode {
-  type: 'IntegerLiteral';
+  kind: 'IntegerLiteral';
   value: string;
 }
 
 export interface FloatLiteral extends SyntaxNode {
-  type: 'FloatLiteral';
+  kind: 'FloatLiteral';
   value: string;
 }
 
 export interface Annotation extends SyntaxNode {
-  type: 'Annotation';
+  kind: 'Annotation';
   name: Identifier;
 }
 
 export interface FieldDefinition extends SyntaxNode {
-  type: 'FieldDefinition';
+  kind: 'FieldDefinition';
   annotation: Annotation | null;
   name: Identifier;
-  fieldType: FieldType;
+  type: TypeNode;
 }
 
 export type Definition = TypeDefinition | DatabaseDefinition | TableDefinition;
 
 export interface TypeDefinition extends SyntaxNode {
-  type: 'TypeDefinition';
+  kind: 'TypeDefinition';
   name: Identifier;
-  body: Array<FieldType>;
+  body: ReadonlyArray<TypeNode>;
 }
 
 export interface TableDefinition extends SyntaxNode {
-  type: 'TableDefinition';
+  kind: 'TableDefinition';
   name: Identifier;
-  body: Array<FieldDefinition>;
+  body: ReadonlyArray<FieldDefinition>;
 }
 
 export interface DatabaseDefinition extends SyntaxNode {
-  type: 'DatabaseDefinition';
+  kind: 'DatabaseDefinition';
   name: Identifier;
-  body: Array<TableDefinition>;
-  tokens?: Array<Token>;
+  body: ReadonlyArray<TableDefinition>;
+  tokens?: ReadonlyArray<Token>;
 }
 
 export interface DatabaseSchema extends Node {
-  type: 'DatabaseSchema';
-  body: Array<DatabaseDefinition | TypeDefinition>;
-  tokens?: Array<Token>;
+  kind: 'DatabaseSchema';
+  body: ReadonlyArray<DatabaseDefinition | TypeDefinition>;
+  tokens?: ReadonlyArray<Token>;
 }
 
 export interface Identifier extends SyntaxNode {
-  type: 'Identifier';
+  kind: 'Identifier';
   value: string;
 }
 
@@ -161,7 +161,7 @@ export type CharacterToken =
 
 export type EndOfFile = 'EOF';
 
-export type SyntaxType =
+export type SyntaxKind =
   | Keyword
   | Structure
   | Literal

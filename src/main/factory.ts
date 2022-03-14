@@ -1,36 +1,36 @@
 import {
   BaseType,
   BooleanLiteral,
-  FieldType,
+  TypeNode,
   FloatLiteral,
   Identifier,
   IntegerLiteral,
   KeywordType,
   MapType,
   StringLiteral,
-  SyntaxType,
+  SyntaxKind,
   TextLocation,
   TextPosition,
   Token,
 } from './parser/types';
 
 export function createToken(
-  type: SyntaxType,
+  kind: SyntaxKind,
   text: string,
   loc: TextLocation,
 ): Token {
-  return { type, text, loc };
+  return { kind, text, loc };
 }
 
 export function createIdentifier(value: string, loc: TextLocation): Identifier {
-  return { type: 'Identifier', value, loc };
+  return { kind: 'Identifier', value, loc };
 }
 
 export function createKeywordFieldType(
-  type: KeywordType,
+  kind: KeywordType,
   loc: TextLocation,
 ): BaseType {
-  return { type, loc };
+  return { kind, loc };
 }
 
 export function createTextLocation(
@@ -41,12 +41,12 @@ export function createTextLocation(
 }
 
 export function createMapFieldType(
-  keyType: FieldType,
-  valueType: FieldType,
+  keyType: TypeNode,
+  valueType: TypeNode,
   loc: TextLocation,
 ): MapType {
   return {
-    type: 'MapType',
+    kind: 'MapType',
     keyType,
     valueType,
     loc,
@@ -57,7 +57,7 @@ export function createBooleanLiteral(
   value: boolean,
   loc: TextLocation,
 ): BooleanLiteral {
-  return { type: 'BooleanLiteral', value, loc };
+  return { kind: 'BooleanLiteral', value, loc };
 }
 
 export function createStringLiteral(
@@ -65,7 +65,7 @@ export function createStringLiteral(
   loc: TextLocation,
 ): StringLiteral {
   return {
-    type: 'StringLiteral',
+    kind: 'StringLiteral',
     value,
     loc,
   };
@@ -75,12 +75,12 @@ export function createIntegerLiteral(
   value: string,
   loc: TextLocation,
 ): IntegerLiteral {
-  return { type: 'IntegerLiteral', value, loc };
+  return { kind: 'IntegerLiteral', value, loc };
 }
 
 export function createFloatLiteral(
   value: string,
   loc: TextLocation,
 ): FloatLiteral {
-  return { type: 'FloatLiteral', value, loc };
+  return { kind: 'FloatLiteral', value, loc };
 }

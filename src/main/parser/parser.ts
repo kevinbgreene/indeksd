@@ -1,11 +1,11 @@
 import {
   Annotation,
   FieldDefinition,
-  FieldType,
+  TypeNode,
   ArrayType,
   MapType,
   SetType,
-  SyntaxType,
+  SyntaxKind,
   TextLocation,
   Token,
   DatabaseSchema,
@@ -22,7 +22,7 @@ export interface Parser {
 }
 
 function isStartOfDefinition(token: Token): boolean {
-  switch (token.type) {
+  switch (token.kind) {
     case 'DatabaseKeyword':
     case 'TableKeyword':
       return true;
@@ -48,19 +48,19 @@ export function createParser(tokens: Array<Token>): Parser {
 
   // PUBLIC
   function parse(): DatabaseSchema {
-    const schema: DatabaseSchema = {
-      type: 'DatabaseSchema',
-      body: [],
-    };
+    const body: Array<DatabaseDefinition | TypeDefinition> = [];
 
     while (!isAtEnd()) {
       const def = parseDefinition();
       if (def !== null) {
-        schema.body.push(def);
+        body.push(def);
       }
     }
 
-    return schema;
+    return {
+      kind: 'DatabaseSchema',
+      body,
+    };
   }
 
   // Finds the beginning of the next statement so we can continue parse after error.
@@ -73,9 +73,7 @@ export function createParser(tokens: Array<Token>): Parser {
   function parseDefinition(): DatabaseDefinition | TypeDefinition | null {
     const next: Token = currentToken();
 
-    console.log({ next });
-
-    switch (next.type) {
+    switch (next.kind) {
       case 'DatabaseKeyword':
         return parseDatabaseDefinition();
 
@@ -122,7 +120,7 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     return {
-      type: 'DatabaseDefinition',
+      kind: 'DatabaseDefinition',
       name: factory.createIdentifier(nameToken.text, nameToken.loc),
       body: tables,
       loc: location,
@@ -178,14 +176,14 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     return {
-      type: 'TableDefinition',
+      kind: 'TableDefinition',
       name: factory.createIdentifier(nameToken.text, nameToken.loc),
       body: fields,
       loc: location,
     };
   }
 
-  // TypeDefinition → 'type ' Identifier '=' FieldType ('|' FieldType)* ';'
+  // TypeDefinition → 'type ' Identifier '=' TypeNode ('|' TypeNode)* ';'
   function parseTypeDefinition(): TypeDefinition {
     const _keywordToken: Token | null = consume('TypeKeyword');
     const keywordToken: Token = requireValue(
@@ -201,7 +199,7 @@ export function createParser(tokens: Array<Token>): Parser {
     const equalToken: Token | null = consume('EqualToken');
     requireValue(equalToken, `Expected '='`);
 
-    const fields: Array<FieldType> = parseFieldTypes();
+    const body: ReadonlyArray<TypeNode> = parseTypeNodes();
 
     const _semicolon: Token | null = consume('SemicolonToken');
     const semicolon: Token = requireValue(
@@ -216,9 +214,9 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     return {
-      type: 'TypeDefinition',
+      kind: 'TypeDefinition',
       name: factory.createIdentifier(nameToken.text, nameToken.loc),
-      body: fields,
+      body: body,
       loc: location,
     };
   }
@@ -236,7 +234,7 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     return {
-      type: 'Annotation',
+      kind: 'Annotation',
       name: factory.createIdentifier(nameToken.text, nameToken.loc),
       loc: factory.createTextLocation(atToken.loc.start, nameToken.loc.end),
     };
@@ -262,7 +260,7 @@ export function createParser(tokens: Array<Token>): Parser {
     return fields;
   }
 
-  // Field → ?Annotation Identifier ':' FieldType ';'
+  // Field → ?Annotation Identifier ':' TypeNode ';'
   function parseField(): FieldDefinition {
     const startLoc: TextLocation = currentToken().loc;
     const annotation: Annotation | null = parseAnnotation();
@@ -275,7 +273,7 @@ export function createParser(tokens: Array<Token>): Parser {
     const colonToken: Token | null = consume('ColonToken');
     requireValue(colonToken, 'Type annotation expected for field');
 
-    const fieldType: FieldType = parseFieldType();
+    const type: TypeNode = parseFieldType();
     const _semicolon: Token | null = consume('SemicolonToken');
     const semicolon: Token = requireValue(
       _semicolon,
@@ -290,16 +288,16 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     return {
-      type: 'FieldDefinition',
+      kind: 'FieldDefinition',
       name: factory.createIdentifier(nameToken.text, nameToken.loc),
       annotation,
-      fieldType,
+      type,
       loc: location,
     };
   }
 
-  function parseFieldTypes(): Array<FieldType> {
-    const fieldTypes: Array<FieldType> = [];
+  function parseTypeNodes(): ReadonlyArray<TypeNode> {
+    const fieldTypes: Array<TypeNode> = [];
 
     while (!check('SemicolonToken')) {
       fieldTypes.push(parseFieldType());
@@ -317,10 +315,10 @@ export function createParser(tokens: Array<Token>): Parser {
     return fieldTypes;
   }
 
-  // FieldType → Identifier | BaseType | ContainerType
-  function parseFieldType(): FieldType {
+  // TypeNode → Identifier | BaseType | ContainerType
+  function parseFieldType(): TypeNode {
     const typeToken: Token = advance();
-    switch (typeToken.type) {
+    switch (typeToken.kind) {
       case 'Identifier':
         return factory.createIdentifier(typeToken.text, typeToken.loc);
 
@@ -336,7 +334,7 @@ export function createParser(tokens: Array<Token>): Parser {
       case 'BooleanKeyword':
       case 'StringKeyword':
       case 'NumberKeyword':
-        return factory.createKeywordFieldType(typeToken.type, typeToken.loc);
+        return factory.createKeywordFieldType(typeToken.kind, typeToken.loc);
 
       case 'StringLiteral':
         return factory.createStringLiteral(typeToken.text, typeToken.loc);
@@ -350,11 +348,11 @@ export function createParser(tokens: Array<Token>): Parser {
         return factory.createBooleanLiteral(false, typeToken.loc);
 
       default:
-        throw reportError(`FieldType expected but found: ${typeToken.type}`);
+        throw reportError(`TypeNode expected but found: ${typeToken.kind}`);
     }
   }
 
-  // MapType → 'Map<' FieldType ',' FieldType '>'
+  // MapType → 'Map<' TypeNode ',' TypeNode '>'
   function parseMapType(): MapType {
     const _openBracket: Token | null = consume('LessThanToken');
     const openBracket: Token = requireValue(
@@ -362,14 +360,14 @@ export function createParser(tokens: Array<Token>): Parser {
       `Map needs to defined contained types`,
     );
 
-    const keyType: FieldType = parseFieldType();
+    const keyType: TypeNode = parseFieldType();
     const _commaToken: Token | null = consume('CommaToken');
     requireValue(
       _commaToken,
       `Comma expected to separate map types <key, value>`,
     );
 
-    const valueType: FieldType = parseFieldType();
+    const valueType: TypeNode = parseFieldType();
     const _closeBracket: Token | null = consume('GreaterThanToken');
     const closeBracket: Token = requireValue(
       _closeBracket,
@@ -384,7 +382,7 @@ export function createParser(tokens: Array<Token>): Parser {
     return factory.createMapFieldType(keyType, valueType, location);
   }
 
-  // SetType → 'Set<' FieldType '>'
+  // SetType → 'Set<' TypeNode '>'
   function parseSetType(): SetType {
     const _openBracket: Token | null = consume('LessThanToken');
     const openBracket: Token = requireValue(
@@ -392,7 +390,7 @@ export function createParser(tokens: Array<Token>): Parser {
       `Map needs to defined contained types`,
     );
 
-    const valueType: FieldType = parseFieldType();
+    const valueType: TypeNode = parseFieldType();
     const _closeBracket: Token | null = consume('GreaterThanToken');
     const closeBracket: Token = requireValue(
       _closeBracket,
@@ -400,7 +398,7 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     return {
-      type: 'SetType',
+      kind: 'SetType',
       valueType,
       loc: {
         start: openBracket.loc.start,
@@ -409,7 +407,7 @@ export function createParser(tokens: Array<Token>): Parser {
     };
   }
 
-  // ArrayType → 'Array<' FieldType '>'
+  // ArrayType → 'Array<' TypeNode '>'
   function parseArrayType(): ArrayType {
     const _openBracket: Token | null = consume('LessThanToken');
     const openBracket: Token = requireValue(
@@ -417,7 +415,7 @@ export function createParser(tokens: Array<Token>): Parser {
       `Map needs to defined contained types`,
     );
 
-    const valueType: FieldType = parseFieldType();
+    const valueType: TypeNode = parseFieldType();
     const _closeBracket: Token | null = consume('GreaterThanToken');
     const closeBracket: Token = requireValue(
       _closeBracket,
@@ -425,7 +423,7 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     return {
-      type: 'ArrayType',
+      kind: 'ArrayType',
       valueType,
       loc: {
         start: openBracket.loc.start,
@@ -448,9 +446,9 @@ export function createParser(tokens: Array<Token>): Parser {
   }
 
   // Does the current token match the given type
-  function check(...types: Array<SyntaxType>): boolean {
+  function check(...types: ReadonlyArray<SyntaxKind>): boolean {
     for (const type of types) {
-      if (type === currentToken().type) {
+      if (type === currentToken().kind) {
         return true;
       }
     }
@@ -470,7 +468,7 @@ export function createParser(tokens: Array<Token>): Parser {
   }
 
   // requireToken the current token to match given type and advance, otherwise return null
-  function consume(...types: Array<SyntaxType>): Token | null {
+  function consume(...types: ReadonlyArray<SyntaxKind>): Token | null {
     for (const type of types) {
       if (check(type)) {
         return advance();
@@ -490,7 +488,7 @@ export function createParser(tokens: Array<Token>): Parser {
   }
 
   function isAtEnd(): boolean {
-    return currentIndex >= tokens.length || currentToken().type === 'EOF';
+    return currentIndex >= tokens.length || currentToken().kind === 'EOF';
   }
 
   function getComments(): Array<Comment> {

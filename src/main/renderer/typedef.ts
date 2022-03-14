@@ -1,6 +1,6 @@
 import * as ts from 'typescript';
-import { FieldType, TypeDefinition } from '../parser';
-import { typeNodeForFieldType } from './types';
+import { TypeNode, TypeDefinition } from '../parser';
+import { typeForTypeNode } from './types';
 
 export function renderTypeDefinition(def: TypeDefinition): ts.Statement {
   return ts.factory.createTypeAliasDeclaration(
@@ -9,8 +9,8 @@ export function renderTypeDefinition(def: TypeDefinition): ts.Statement {
     ts.factory.createIdentifier(def.name.value),
     undefined,
     ts.factory.createUnionTypeNode([
-      ...def.body.map((next: FieldType) => {
-        return typeNodeForFieldType(next);
+      ...def.body.map((next: TypeNode) => {
+        return typeForTypeNode(next);
       }),
     ]),
   );

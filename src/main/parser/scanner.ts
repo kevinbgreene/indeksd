@@ -1,6 +1,6 @@
 import { createToken } from '../factory';
 import { KEYWORDS } from '../keywords';
-import { Keyword, SyntaxType, TextLocation, Token } from './types';
+import { Keyword, SyntaxKind, TextLocation, Token } from './types';
 
 function isDigit(value: string): boolean {
   return value >= '0' && value <= '9';
@@ -272,12 +272,12 @@ export function createScanner(src: string) {
     };
   }
 
-  function commitToken(type: SyntaxType): void {
+  function commitToken(type: SyntaxKind): void {
     const literal: string = source.substring(startIndex, currentIndex);
     addToken(type, literal);
   }
 
-  function addToken(type: SyntaxType, value: string): void {
+  function addToken(type: SyntaxKind, value: string): void {
     const loc: TextLocation = currentLocation();
     tokens.push(createToken(type, value, loc));
   }

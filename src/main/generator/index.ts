@@ -1,5 +1,5 @@
+import { renderDefinitions } from '../renderer';
 import { IIndeksdProject, IGeneratedFile, IParsedFile } from '../types';
-import { processDefinitions } from './iterator';
 
 export function generateProject(
   project: IIndeksdProject,
@@ -13,7 +13,7 @@ export function generateProject(
       name: 'index',
       ext: 'ts',
       path: file.sourceFile.path,
-      body: processDefinitions(file.body),
+      body: renderDefinitions(file.body),
     });
   });
 

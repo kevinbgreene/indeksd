@@ -13,8 +13,8 @@ export interface IIndeksdProject {
   // Source directory (relative to root) for schema files
   sourceDir: string;
 
-  // Array of parsed source files
-  files: Array<IParsedFile>;
+  // ReadonlyArray of parsed source files
+  files: ReadonlyArray<IParsedFile>;
 
   // Options for rendering this project
   options: IMakeOptions;
@@ -27,7 +27,7 @@ export interface IParsedFile {
   sourceFile: ISourceFile;
 
   // AST for source file content
-  body: Array<Definition>;
+  body: ReadonlyArray<Definition>;
 
   // Did error occur while parsing
   errors: boolean;
@@ -62,7 +62,7 @@ export interface IGeneratedFile {
   path: string;
 
   // Body of file as TS Nodes
-  body: Array<ts.Statement>;
+  body: ReadonlyArray<ts.Statement>;
 }
 
 export interface IMakeOptions {
@@ -76,5 +76,5 @@ export interface IMakeOptions {
   sourceDir: string;
 
   // Files to generate from
-  files: Array<string>;
+  files: ReadonlyArray<string>;
 }

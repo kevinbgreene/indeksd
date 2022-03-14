@@ -17,7 +17,7 @@ function parse(source: string): DatabaseSchema {
 
 function parseSchemaString(source: string): DatabaseSchema {
   const schema: DatabaseSchema = parse(source);
-  switch (schema.type) {
+  switch (schema.kind) {
     case 'DatabaseSchema':
       return schema;
 

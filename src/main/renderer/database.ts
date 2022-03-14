@@ -5,21 +5,35 @@ import {
   FieldDefinition,
   TableDefinition,
 } from '../parser';
+import {
+  createClientFunction,
+  createClientTypeDeclaration,
+  createClientTypeNode,
+} from './client';
+import { createGetArgsType } from './client/getMethod';
+import { createConstStatement, createParameterDeclaration } from './helpers';
+import { autoincrementFieldsForTable } from './keys';
 import { createBooleanLiteral } from './types';
 
 export function renderDatabaseDefinition(
   def: DatabaseDefinition,
 ): ReadonlyArray<ts.Statement> {
   return [
-    createClientFunction(),
+    ...def.body.map((next) => {
+      return createGetArgsType(next);
+    }),
+    createClientTypeDeclaration(def),
+    createClientFunction(def),
     ts.factory.createFunctionDeclaration(
       undefined,
-      undefined,
+      [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
       undefined,
       ts.factory.createIdentifier('init'),
       undefined,
       [],
-      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise),
+      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
+        createClientTypeNode(def),
+      ]),
       ts.factory.createBlock(
         [
           ts.factory.createReturnStatement(
@@ -31,12 +45,8 @@ export function renderDatabaseDefinition(
                   undefined,
                   undefined,
                   [
-                    createParameterDeclaration(
-                      ts.factory.createIdentifier('resolve'),
-                    ),
-                    createParameterDeclaration(
-                      ts.factory.createIdentifier('reject'),
-                    ),
+                    createParameterDeclaration(COMMON_IDENTIFIERS.resolve),
+                    createParameterDeclaration(COMMON_IDENTIFIERS.reject),
                   ],
                   undefined,
                   undefined,
@@ -44,6 +54,7 @@ export function renderDatabaseDefinition(
                     [
                       createConstStatement(
                         COMMON_IDENTIFIERS.DBOpenRequest,
+                        undefined,
                         ts.factory.createCallExpression(
                           ts.factory.createPropertyAccessExpression(
                             COMMON_IDENTIFIERS.globalThis,
@@ -56,7 +67,7 @@ export function renderDatabaseDefinition(
                       createEventHandler('onerror', [
                         ts.factory.createExpressionStatement(
                           ts.factory.createCallExpression(
-                            ts.factory.createIdentifier('reject'),
+                            COMMON_IDENTIFIERS.reject,
                             undefined,
                             [
                               ts.factory.createStringLiteral(
@@ -66,7 +77,10 @@ export function renderDatabaseDefinition(
                           ),
                         ),
                       ]),
-                      createEventHandler('onsuccess', [createDbAssignment()]),
+                      createEventHandler('onsuccess', [
+                        createDbAssignment(),
+                        createCallToCreateClient(),
+                      ]),
                       createEventHandler('onupgradeneeded', [
                         createDbAssignment(),
                         ...createObjectStores(def),
@@ -86,6 +100,18 @@ export function renderDatabaseDefinition(
   ];
 }
 
+function createCallToCreateClient(): ts.ExpressionStatement {
+  return ts.factory.createExpressionStatement(
+    ts.factory.createCallExpression(COMMON_IDENTIFIERS.resolve, undefined, [
+      ts.factory.createCallExpression(
+        ts.factory.createIdentifier('createDatabaseClient'),
+        undefined,
+        [ts.factory.createIdentifier('db')],
+      ),
+    ]),
+  );
+}
+
 function identifierForObjectStore(def: TableDefinition): ts.Identifier {
   return ts.factory.createIdentifier(`${def.name.value}Store`);
 }
@@ -96,6 +122,7 @@ function createObjectStores(
   return def.body.map((next) => {
     return createConstStatement(
       identifierForObjectStore(next),
+      undefined,
       ts.factory.createCallExpression(
         ts.factory.createPropertyAccessExpression(
           ts.factory.createIdentifier('db'),
@@ -127,15 +154,6 @@ function createOptionsForObjectStore(
         ts.factory.createStringLiteral(next.name.value),
       );
     }),
-  );
-}
-
-function autoincrementFieldsForTable(
-  def: TableDefinition,
-): ReadonlyArray<FieldDefinition> {
-  console.log(def);
-  return def.body.filter(
-    (next) => next.annotation?.name.value === 'autoincrement',
   );
 }
 
@@ -185,42 +203,10 @@ function indexFieldsForTable(
   return def.body.filter((next) => next.annotation?.name.value === 'index');
 }
 
-function createClientFunction(): ts.Statement {
-  return ts.factory.createFunctionDeclaration(
-    undefined,
-    undefined,
-    undefined,
-    ts.factory.createIdentifier('createDatabaseClient'),
-    undefined,
-    [], // args
-    undefined, // return type
-    ts.factory.createBlock([], true),
-  );
-}
-
-function createConstStatement(
-  variableName: ts.Identifier,
-  initializer: ts.Expression,
-): ts.Statement {
-  return ts.factory.createVariableStatement(
-    undefined,
-    ts.factory.createVariableDeclarationList(
-      [
-        ts.factory.createVariableDeclaration(
-          variableName,
-          undefined,
-          undefined,
-          initializer,
-        ),
-      ],
-      ts.NodeFlags.Const,
-    ),
-  );
-}
-
 function createDbAssignment(): ts.Statement {
   return createConstStatement(
     ts.factory.createIdentifier('db'),
+    undefined,
     ts.factory.createPropertyAccessExpression(
       COMMON_IDENTIFIERS.DBOpenRequest,
       ts.factory.createIdentifier('result'),
@@ -247,19 +233,5 @@ function createEventHandler(
         ts.factory.createBlock(eventStatements, true),
       ),
     ),
-  );
-}
-
-function createParameterDeclaration(
-  name: ts.Identifier,
-): ts.ParameterDeclaration {
-  return ts.factory.createParameterDeclaration(
-    undefined,
-    undefined,
-    undefined,
-    name,
-    undefined,
-    undefined,
-    undefined,
   );
 }

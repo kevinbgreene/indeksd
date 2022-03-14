@@ -1,25 +1,25 @@
 import * as ts from 'typescript';
 import { COMMON_IDENTIFIERS } from '../identifiers';
-import { FieldType } from '../parser/types';
+import { TypeNode } from '../parser/types';
 
-export function typeNodeForFieldType(fieldType: FieldType): ts.TypeNode {
-  switch (fieldType.type) {
+export function typeForTypeNode(typeNode: TypeNode): ts.TypeNode {
+  switch (typeNode.kind) {
     case 'Identifier':
-      return ts.factory.createTypeReferenceNode(fieldType.value);
+      return ts.factory.createTypeReferenceNode(typeNode.value);
 
     case 'SetType':
       return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Set, [
-        typeNodeForFieldType(fieldType.valueType),
+        typeForTypeNode(typeNode.valueType),
       ]);
 
     case 'MapType':
       return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Map, [
-        typeNodeForFieldType(fieldType.keyType),
-        typeNodeForFieldType(fieldType.valueType),
+        typeForTypeNode(typeNode.keyType),
+        typeForTypeNode(typeNode.valueType),
       ]);
 
     case 'ArrayType':
-      return createArrayType(typeNodeForFieldType(fieldType.valueType));
+      return createArrayType(typeForTypeNode(typeNode.valueType));
 
     case 'StringKeyword':
       return createStringType();
@@ -32,26 +32,26 @@ export function typeNodeForFieldType(fieldType: FieldType): ts.TypeNode {
 
     case 'StringLiteral':
       return ts.factory.createLiteralTypeNode(
-        ts.factory.createStringLiteral(fieldType.value),
+        ts.factory.createStringLiteral(typeNode.value),
       );
 
     case 'IntegerLiteral':
       return ts.factory.createLiteralTypeNode(
-        ts.factory.createNumericLiteral(parseInt(fieldType.value)),
+        ts.factory.createNumericLiteral(parseInt(typeNode.value)),
       );
 
     case 'FloatLiteral':
       return ts.factory.createLiteralTypeNode(
-        ts.factory.createNumericLiteral(parseFloat(fieldType.value)),
+        ts.factory.createNumericLiteral(parseFloat(typeNode.value)),
       );
 
     case 'BooleanLiteral':
       return ts.factory.createLiteralTypeNode(
-        createBooleanLiteral(fieldType.value),
+        createBooleanLiteral(typeNode.value),
       );
 
     default:
-      const msg: never = fieldType;
+      const msg: never = typeNode;
       throw new Error(`Non-exhaustive match for: ${msg}`);
   }
 }
@@ -77,15 +77,15 @@ export function createAnyType(): ts.TypeNode {
   return ts.factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
 }
 
-export function createStringType(): ts.KeywordTypeNode {
+export function createStringType(): ts.TypeNode {
   return ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
 }
 
-export function createNumberType(): ts.KeywordTypeNode {
+export function createNumberType(): ts.TypeNode {
   return ts.factory.createKeywordTypeNode(ts.SyntaxKind.NumberKeyword);
 }
 
-export function createBooleanType(): ts.KeywordTypeNode {
+export function createBooleanType(): ts.TypeNode {
   return ts.factory.createKeywordTypeNode(ts.SyntaxKind.BooleanKeyword);
 }
 

@@ -14,6 +14,7 @@ export function resolveOptions(args: Array<string>): IMakeOptions {
   const len: number = args.length;
   let index: number = 0;
   const options: IMakeOptions = deepCopy(DEFAULT_OPTIONS);
+  const files = [];
 
   while (index < len) {
     const next: string = args[index];
@@ -51,11 +52,14 @@ export function resolveOptions(args: Array<string>): IMakeOptions {
           throw new Error(`Unknown option provided to generator "${next}"`);
         } else {
           // Assume option is a file to render
-          options.files.push(next);
+          files.push(next);
           index += 1;
         }
     }
   }
 
-  return options;
+  return {
+    ...options,
+    files,
+  };
 }
