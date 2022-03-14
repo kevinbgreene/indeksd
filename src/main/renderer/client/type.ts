@@ -1,7 +1,9 @@
 import * as ts from 'typescript';
 import { COMMON_IDENTIFIERS } from '../../identifiers';
 import { DatabaseDefinition, TableDefinition } from '../../parser';
+import { getAnnotationsByName } from '../keys';
 import { createVoidType } from '../types';
+import { capitalize } from '../utils';
 import { createDatabaseClientName } from './common';
 
 export function createClientTypeDeclaration(
@@ -42,11 +44,30 @@ function createAddMethodTypeNode(def: TableDefinition): ts.TypeNode {
         undefined,
         'arg',
         undefined,
-        ts.factory.createTypeReferenceNode(def.name.value, undefined),
+        ts.factory.createTypeReferenceNode(getItemNameForTable(def), undefined),
       ),
     ],
     ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
       createVoidType(),
     ]),
   );
+}
+
+export function getItemNameForTable(def: TableDefinition): string {
+  const itemAnnotations = getAnnotationsByName(def.annotations, 'item');
+  console.log({ itemAnnotations });
+  if (itemAnnotations.length > 1) {
+    throw new Error('Table can only include one annotation for "item"');
+  }
+
+  const itemArguments = itemAnnotations[0]?.arguments;
+  if (itemArguments && itemArguments.length > 1) {
+    throw new Error('Table can only include one name alias');
+  }
+
+  if (itemArguments && itemArguments.length > 0) {
+    return itemArguments[0]?.value;
+  }
+
+  return capitalize(def.name.value);
 }

@@ -151,6 +151,7 @@ function createOptionsForObjectStore(
       `Only one field can be set as autoincrement but found ${autoincrementFields.length} in ${def.name.value}`,
     );
   }
+
   return ts.factory.createObjectLiteralExpression(
     autoincrementFields.map((next) => {
       return ts.factory.createPropertyAssignment(

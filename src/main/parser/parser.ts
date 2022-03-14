@@ -12,10 +12,12 @@ import {
   DatabaseDefinition,
   TableDefinition,
   TypeDefinition,
+  StringLiteral,
+  Expression,
 } from './types';
 
 import * as factory from '../factory';
-import { StringLiteral } from '.';
+import { createStringLiteral } from '../factory';
 
 export interface Parser {
   parse(): DatabaseSchema;
@@ -160,6 +162,8 @@ export function createParser(tokens: Array<Token>): Parser {
       `Unable to find identifier for table`,
     );
 
+    const annotations = parseAnnotations();
+
     const _openBrace: Token | null = consume('LeftBraceToken');
     requireValue(_openBrace, `Expected opening curly brace`);
 
@@ -180,6 +184,7 @@ export function createParser(tokens: Array<Token>): Parser {
       kind: 'TableDefinition',
       name: factory.createIdentifier(nameToken.text, nameToken.loc),
       body: fields,
+      annotations,
       loc: location,
     };
   }
@@ -223,20 +228,12 @@ export function createParser(tokens: Array<Token>): Parser {
   }
 
   function parseAnnotations(): ReadonlyArray<Annotation> {
-    const annotations = [];
+    const annotations: Array<Annotation> = [];
 
-    while (!check('Identifier')) {
+    while (check('AtToken')) {
       const annotation = parseAnnotation();
       if (annotation) {
         annotations.push(annotation);
-      }
-
-      if (isStartOfDefinition(currentToken())) {
-        throw reportError(
-          `Closing paren ')' expected, but new definition found`,
-        );
-      } else if (check('EOF')) {
-        throw reportError(`Closing paren ')' expected but reached end of file`);
       }
     }
 
@@ -265,22 +262,43 @@ export function createParser(tokens: Array<Token>): Parser {
       `Annotation must have a name`,
     );
 
-    // const args = parseAnnotationArgs();
+    const args = parseAnnotationArgs();
 
     return {
       kind: 'Annotation',
       name: factory.createIdentifier(nameToken.text, nameToken.loc),
+      arguments: args,
       loc: factory.createTextLocation(atToken.loc.start, nameToken.loc.end),
     };
   }
 
-  // function parseAnnotationArgs(): ReadonlyArray<string> {
-  //   const openParen: Token | null = consume('RightParenToken');
-  //   if (openParen == null) {
-  //     return [];
-  //   }
+  function parseAnnotationArgs(): ReadonlyArray<StringLiteral> {
+    const args: Array<StringLiteral> = [];
+    const openParen: Token | null = consume('LeftParenToken');
+    if (openParen == null) {
+      return args;
+    }
 
-  // }
+    while (!check('RightParenToken')) {
+      readListSeparator();
+      const arg = consume('StringLiteral');
+      if (arg) {
+        args.push(createStringLiteral(arg.text, arg.loc));
+      }
+
+      if (isStartOfDefinition(currentToken())) {
+        throw reportError(
+          `Closing paren ')' expected, but new definition found`,
+        );
+      } else if (check('EOF')) {
+        throw reportError(`Closing paren ')' expected but reached end of file`);
+      }
+    }
+
+    consume('RightParenToken');
+
+    return args;
+  }
 
   function parseFields(): Array<FieldDefinition> {
     const fields: Array<FieldDefinition> = [];

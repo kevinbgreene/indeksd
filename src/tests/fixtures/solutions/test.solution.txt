@@ -2,7 +2,7 @@ export type Value = 1 | 2 | 3;
 export type Value2 = "1" | true | 0.2;
 export type Value3 = Value | false;
 export type Value4 = "some";
-type AuthorGetArgs = string | {
+type AuthorsGetArgs = string | {
     name: string;
 } | {
     email: string;
@@ -11,19 +11,19 @@ type PostsGetArgs = {
     name: string;
 };
 export type MyDatabaseClient = {
-    author: {
-        add: (arg: Author) => Promise<void>;
+    authors: {
+        add: (arg: Authors) => Promise<void>;
     };
     posts: {
-        add: (arg: Posts) => Promise<void>;
+        add: (arg: Post) => Promise<void>;
     };
 };
 function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
     return {
-        author: {
-            add: (arg: Author): Promise<void> => {
-                const tx = db.transaction(["Author"], "readwrite");
-                const store = tx.objectStore("Author");
+        authors: {
+            add: (arg: Authors): Promise<void> => {
+                const tx = db.transaction(["Authors"], "readwrite");
+                const store = tx.objectStore("Authors");
                 const addRequest: IDBRequest = store.add(arg);
                 addRequest.onerror = event => {
                     reject(event);
@@ -34,7 +34,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             }
         },
         posts: {
-            add: (arg: Posts): Promise<void> => {
+            add: (arg: Post): Promise<void> => {
                 const tx = db.transaction(["Posts"], "readwrite");
                 const store = tx.objectStore("Posts");
                 const addRequest: IDBRequest = store.add(arg);
@@ -60,10 +60,10 @@ export function init(): Promise<MyDatabaseClient> {
         };
         DBOpenRequest.onupgradeneeded = event => {
             const db = DBOpenRequest.result;
-            const AuthorStore = db.createObjectStore("Author", { keyPath: "id" });
+            const AuthorsStore = db.createObjectStore("Authors", { keyPath: "id" });
             const PostsStore = db.createObjectStore("Posts", {});
-            AuthorStore.createIndex("name", "name", { unique: false });
-            AuthorStore.createIndex("email", "email", { unique: true });
+            AuthorsStore.createIndex("name", "name", { unique: false });
+            AuthorsStore.createIndex("email", "email", { unique: true });
             PostsStore.createIndex("name", "name", { unique: false });
         };
     });

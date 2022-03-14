@@ -76,15 +76,23 @@ export interface FloatLiteral extends SyntaxNode {
 export interface Annotation extends SyntaxNode {
   kind: 'Annotation';
   name: Identifier;
-  // args: ReadonlyArray<string>;
+  arguments: ReadonlyArray<StringLiteral>;
 }
 
 export interface FieldDefinition extends SyntaxNode {
   kind: 'FieldDefinition';
-  annotations: ReadonlyArray<Annotation>;
+  annotations: Annotations;
   name: Identifier;
   type: TypeNode;
 }
+
+export type Expression =
+  | StringLiteral
+  | FloatLiteral
+  | IntegerLiteral
+  | Identifier;
+
+export type Annotations = ReadonlyArray<Annotation>;
 
 export type Definition = TypeDefinition | DatabaseDefinition | TableDefinition;
 
@@ -98,6 +106,7 @@ export interface TableDefinition extends SyntaxNode {
   kind: 'TableDefinition';
   name: Identifier;
   body: ReadonlyArray<FieldDefinition>;
+  annotations: Annotations;
 }
 
 export interface DatabaseDefinition extends SyntaxNode {
@@ -154,6 +163,8 @@ export type CharacterToken =
   | 'SemicolonToken'
   | 'RightBraceToken'
   | 'LeftBraceToken'
+  | 'RightParenToken'
+  | 'LeftParenToken'
   | 'GreaterThanToken'
   | 'LessThanToken'
   | 'AtToken'

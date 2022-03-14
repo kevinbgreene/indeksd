@@ -3,6 +3,7 @@ import {
   TypeNode,
   TableDefinition,
   Annotation,
+  Annotations,
 } from '../parser';
 
 export type TableIndex = Readonly<{
@@ -61,4 +62,13 @@ export function indexFieldsForTable(
   return def.body.filter((next) =>
     annotationsInclude(next.annotations, 'index'),
   );
+}
+
+export function getAnnotationsByName(
+  annotations: Annotations,
+  name: string,
+): Annotations {
+  return annotations.filter((next) => {
+    return next.name.value === name;
+  });
 }

@@ -5,7 +5,7 @@ type Value4 = 'some';
 
 database MyDatabase {
 
-  table Authors @item("Author") {
+  table Authors {
     @autoincrement id: number;
     @index name: string;
     @index @unique email: string;
