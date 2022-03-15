@@ -2,48 +2,61 @@ export type Value = 1 | 2 | 3;
 export type Value2 = "1" | true | 0.2;
 export type Value3 = Value | false;
 export type Value4 = "some";
-type AuthorsGetArgs = string | {
+export type Authors = {
+    id: number;
+    name: string;
+    email: string;
+};
+export type Post = {
+    name: string;
+    content: string;
+};
+export type AuthorsGetArgs = string | {
     name: string;
 } | {
     email: string;
 };
-type PostsGetArgs = {
+export type PostsGetArgs = {
     name: string;
 };
 export type MyDatabaseClient = {
     authors: {
-        add: (arg: Authors) => Promise<void>;
+        add: (arg: Omit<Authors, "id">) => Promise<Authors>;
     };
     posts: {
-        add: (arg: Post) => Promise<void>;
+        add: (arg: Post) => Promise<Post>;
     };
 };
 function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
     return {
         authors: {
-            add: (arg: Authors): Promise<void> => {
-                const tx = db.transaction(["Authors"], "readwrite");
-                const store = tx.objectStore("Authors");
-                const addRequest: IDBRequest = store.add(arg);
-                addRequest.onerror = event => {
-                    reject(event);
-                };
-                addRequest.onsuccess = event => {
-                    resolve();
-                };
+            add: (arg: Omit<Authors, "id">): Promise<Authors> => {
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(["Authors"], "readwrite");
+                    const store = tx.objectStore("Authors");
+                    const addRequest: IDBRequest = store.add(arg);
+                    addRequest.onerror = event => {
+                        reject(event);
+                    };
+                    addRequest.onsuccess = event => {
+                        resolve(event.target.result);
+                    };
+                });
             }
         },
         posts: {
-            add: (arg: Post): Promise<void> => {
-                const tx = db.transaction(["Posts"], "readwrite");
-                const store = tx.objectStore("Posts");
-                const addRequest: IDBRequest = store.add(arg);
-                addRequest.onerror = event => {
-                    reject(event);
-                };
-                addRequest.onsuccess = event => {
-                    resolve();
-                };
+            add: (arg: Post): Promise<Post> => {
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(["Posts"], "readwrite");
+                    const store = tx.objectStore("Posts");
+                    const addRequest: IDBRequest = store.add(arg);
+                    addRequest.onerror = event => {
+                        reject(event);
+                    };
+                    addRequest.onsuccess = event => {
+                        resolve(event.target.result);
+                    };
+                });
             }
         }
     };

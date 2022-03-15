@@ -1,9 +1,8 @@
 import * as ts from 'typescript';
-import { COMMON_IDENTIFIERS } from '../../identifiers';
 import { DatabaseDefinition, TableDefinition } from '../../parser';
 import { getAnnotationsByName } from '../keys';
-import { createVoidType } from '../types';
 import { capitalize } from '../utils';
+import { createAddMethodTypeNode } from './addMethod';
 import { createDatabaseClientName } from './common';
 
 export function createClientTypeDeclaration(
@@ -34,28 +33,8 @@ export function createClientTypeDeclaration(
   );
 }
 
-function createAddMethodTypeNode(def: TableDefinition): ts.TypeNode {
-  return ts.factory.createFunctionTypeNode(
-    undefined,
-    [
-      ts.factory.createParameterDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        'arg',
-        undefined,
-        ts.factory.createTypeReferenceNode(getItemNameForTable(def), undefined),
-      ),
-    ],
-    ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
-      createVoidType(),
-    ]),
-  );
-}
-
 export function getItemNameForTable(def: TableDefinition): string {
   const itemAnnotations = getAnnotationsByName(def.annotations, 'item');
-  console.log({ itemAnnotations });
   if (itemAnnotations.length > 1) {
     throw new Error('Table can only include one annotation for "item"');
   }

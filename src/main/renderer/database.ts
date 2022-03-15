@@ -10,21 +10,51 @@ import {
   createClientTypeDeclaration,
   createClientTypeNode,
 } from './client';
-import { createGetArgsType } from './client/getMethod';
-import { createConstStatement, createParameterDeclaration } from './helpers';
+import { createGetArgsType, createIndexPredicates } from './client/getMethod';
+import { getItemNameForTable } from './client/type';
+import {
+  createConstStatement,
+  createNewPromiseWithBody,
+  createParameterDeclaration,
+} from './helpers';
 import {
   annotationsInclude,
   autoincrementFieldsForTable,
-  indexFieldsForTable,
+  getIndexFieldsForTable,
 } from './keys';
-import { createBooleanLiteral } from './types';
+import { createBooleanLiteral, typeForTypeNode } from './types';
+
+function createItemTypeForTable(def: TableDefinition): ts.TypeAliasDeclaration {
+  return ts.factory.createTypeAliasDeclaration(
+    undefined,
+    [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
+    getItemNameForTable(def),
+    undefined,
+    ts.factory.createTypeLiteralNode(
+      def.body.map((next) => {
+        return ts.factory.createPropertySignature(
+          undefined,
+          ts.factory.createIdentifier(next.name.value),
+          undefined,
+          typeForTypeNode(next.type),
+        );
+      }),
+    ),
+  );
+}
 
 export function renderDatabaseDefinition(
   def: DatabaseDefinition,
 ): ReadonlyArray<ts.Statement> {
   return [
     ...def.body.map((next) => {
+      return createItemTypeForTable(next);
+    }),
+    ...def.body.map((next) => {
       return createGetArgsType(next);
+    }),
+    ...def.body.flatMap((next) => {
+      return createIndexPredicates(next);
     }),
     createClientTypeDeclaration(def),
     createClientFunction(def),
@@ -41,60 +71,46 @@ export function renderDatabaseDefinition(
       ts.factory.createBlock(
         [
           ts.factory.createReturnStatement(
-            ts.factory.createNewExpression(
-              COMMON_IDENTIFIERS.Promise,
-              undefined,
-              [
-                ts.factory.createArrowFunction(
-                  undefined,
-                  undefined,
-                  [
-                    createParameterDeclaration(COMMON_IDENTIFIERS.resolve),
-                    createParameterDeclaration(COMMON_IDENTIFIERS.reject),
-                  ],
-                  undefined,
-                  undefined,
-                  ts.factory.createBlock(
-                    [
-                      createConstStatement(
-                        COMMON_IDENTIFIERS.DBOpenRequest,
-                        undefined,
-                        ts.factory.createCallExpression(
-                          ts.factory.createPropertyAccessExpression(
-                            COMMON_IDENTIFIERS.globalThis,
-                            'open',
-                          ),
-                          undefined,
-                          [ts.factory.createStringLiteral(def.name.value)],
-                        ),
+            createNewPromiseWithBody(
+              ts.factory.createBlock(
+                [
+                  createConstStatement(
+                    COMMON_IDENTIFIERS.DBOpenRequest,
+                    undefined,
+                    ts.factory.createCallExpression(
+                      ts.factory.createPropertyAccessExpression(
+                        COMMON_IDENTIFIERS.globalThis,
+                        'open',
                       ),
-                      createEventHandler('onerror', [
-                        ts.factory.createExpressionStatement(
-                          ts.factory.createCallExpression(
-                            COMMON_IDENTIFIERS.reject,
-                            undefined,
-                            [
-                              ts.factory.createStringLiteral(
-                                `Error opening database: ${def.name.value}`,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ]),
-                      createEventHandler('onsuccess', [
-                        createDbAssignment(),
-                        createCallToCreateClient(),
-                      ]),
-                      createEventHandler('onupgradeneeded', [
-                        createDbAssignment(),
-                        ...createObjectStores(def),
-                        ...createObjectStoreIndexes(def),
-                      ]),
-                    ],
-                    true,
+                      undefined,
+                      [ts.factory.createStringLiteral(def.name.value)],
+                    ),
                   ),
-                ),
-              ],
+                  createEventHandler('onerror', [
+                    ts.factory.createExpressionStatement(
+                      ts.factory.createCallExpression(
+                        COMMON_IDENTIFIERS.reject,
+                        undefined,
+                        [
+                          ts.factory.createStringLiteral(
+                            `Error opening database: ${def.name.value}`,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ]),
+                  createEventHandler('onsuccess', [
+                    createDbAssignment(),
+                    createCallToCreateClient(),
+                  ]),
+                  createEventHandler('onupgradeneeded', [
+                    createDbAssignment(),
+                    ...createObjectStores(def),
+                    ...createObjectStoreIndexes(def),
+                  ]),
+                ],
+                true,
+              ),
             ),
           ),
         ],
@@ -173,7 +189,7 @@ function createObjectStoreIndexes(
 function createIndexesForStore(
   def: TableDefinition,
 ): ReadonlyArray<ts.Statement> {
-  const indexes = indexFieldsForTable(def);
+  const indexes = getIndexFieldsForTable(def);
   return indexes.map((next) => {
     return ts.factory.createExpressionStatement(
       ts.factory.createCallExpression(

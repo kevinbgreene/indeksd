@@ -2,6 +2,7 @@ import * as ts from 'typescript';
 import { DatabaseDefinition } from '../../parser';
 import { createAddMethod } from './addMethod';
 import { createClientTypeNode } from './common';
+import { createGetMethod } from './getMethod';
 
 export { createClientTypeDeclaration } from './type';
 export { createClientTypeNode } from './common';
@@ -34,7 +35,7 @@ export function createClientFunction(def: DatabaseDefinition): ts.Statement {
               return ts.factory.createPropertyAssignment(
                 next.name.value.toLowerCase(),
                 ts.factory.createObjectLiteralExpression(
-                  [createAddMethod(next)],
+                  [createAddMethod(next), createGetMethod(next)],
                   true,
                 ),
               );
@@ -47,8 +48,3 @@ export function createClientFunction(def: DatabaseDefinition): ts.Statement {
     ),
   );
 }
-
-// function createPredicateForIndex() {
-//   // createTypePredicateNode
-//   // createTypeOfExpression
-// }

@@ -56,7 +56,7 @@ export function autoincrementFieldsForTable(
   );
 }
 
-export function indexFieldsForTable(
+export function getIndexFieldsForTable(
   def: TableDefinition,
 ): ReadonlyArray<FieldDefinition> {
   return def.body.filter((next) =>
