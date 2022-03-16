@@ -79,7 +79,10 @@ export function renderDatabaseDefinition(
                     undefined,
                     ts.factory.createCallExpression(
                       ts.factory.createPropertyAccessExpression(
-                        COMMON_IDENTIFIERS.globalThis,
+                        ts.factory.createPropertyAccessExpression(
+                          COMMON_IDENTIFIERS.globalThis,
+                          'indexedDB',
+                        ),
                         'open',
                       ),
                       undefined,
@@ -209,7 +212,7 @@ function createIndexesForStore(
 }
 
 function optionsForIndex(def: FieldDefinition): ts.ObjectLiteralExpression {
-  const isFieldUnique = annotationsInclude(def.annotations, 'unique');
+  const isFieldUnique = annotationsInclude(def.annotations, ['unique']);
   return ts.factory.createObjectLiteralExpression([
     ts.factory.createPropertyAssignment(
       ts.factory.createIdentifier('unique'),

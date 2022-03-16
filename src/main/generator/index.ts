@@ -7,6 +7,7 @@ export function generateProject(
   let result: Array<IGeneratedFile> = [];
 
   project.files.forEach((file: IParsedFile) => {
+    console.log({ file });
     // Index file for this namespace
     result.push({
       type: 'GeneratedFile',

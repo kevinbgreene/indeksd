@@ -31,7 +31,17 @@ export function createOnErrorHandler(methodName: string): ts.Statement {
               ts.factory.createCallExpression(
                 COMMON_IDENTIFIERS.reject,
                 undefined,
-                [COMMON_IDENTIFIERS.event],
+                [
+                  ts.factory.createPropertyAccessExpression(
+                    ts.factory.createAsExpression(
+                      ts.factory.createIdentifier(methodName),
+                      ts.factory.createTypeReferenceNode(
+                        ts.factory.createIdentifier('IDBRequest'),
+                      ),
+                    ),
+                    'error',
+                  ),
+                ],
               ),
             ),
           ],
@@ -63,9 +73,11 @@ export function createOnSuccessHandler(methodName: string): ts.Statement {
                 undefined,
                 [
                   ts.factory.createPropertyAccessExpression(
-                    ts.factory.createPropertyAccessExpression(
-                      COMMON_IDENTIFIERS.event,
-                      'target',
+                    ts.factory.createAsExpression(
+                      ts.factory.createIdentifier(methodName),
+                      ts.factory.createTypeReferenceNode(
+                        ts.factory.createIdentifier('IDBRequest'),
+                      ),
                     ),
                     'result',
                   ),

@@ -4,22 +4,11 @@ import { TypeNode } from '../parser/types';
 
 export function typeForTypeNode(typeNode: TypeNode): ts.TypeNode {
   switch (typeNode.kind) {
-    case 'Identifier':
-      return ts.factory.createTypeReferenceNode(typeNode.value);
-
-    case 'SetType':
-      return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Set, [
-        typeForTypeNode(typeNode.valueType),
-      ]);
-
-    case 'MapType':
-      return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Map, [
-        typeForTypeNode(typeNode.keyType),
-        typeForTypeNode(typeNode.valueType),
-      ]);
-
-    case 'ArrayType':
-      return createArrayType(typeForTypeNode(typeNode.valueType));
+    case 'TypeReferenceNode':
+      return ts.factory.createTypeReferenceNode(
+        typeNode.name.value,
+        typeNode.typeArgs.map(typeForTypeNode),
+      );
 
     case 'StringKeyword':
       return createStringType();

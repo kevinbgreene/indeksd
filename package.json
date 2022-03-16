@@ -1,11 +1,18 @@
 {
   "name": "indeksd",
   "version": "0.0.1",
-  "description": "A DSL for defining IndexedDB schemas that compiles into a TypeScript implementation of simplified IndexedDB client.",
+  "description": "A DSL for defining IndexedDB schemas that compile into a type safe database client.",
   "main": "./dist/main/index.js",
   "bin": {
     "indeksd": "./dist/main/bin/index.js"
   },
+  "keywords": [
+    "TypeScript",
+    "IndexedDB",
+    "database",
+    "schema",
+    "DSL"
+  ],
   "scripts": {
     "format": "prettier --write 'src/**/*.ts'",
     "clean": "rimraf dist",
@@ -32,6 +39,6 @@
     "@types/fs-extra": "^9.0.13",
     "fs-extra": "^10.0.1",
     "glob": "^7.2.0",
-    "typescript": "^4.5.5"
+    "typescript": "^4.6.2"
   }
 }

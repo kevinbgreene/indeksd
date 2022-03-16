@@ -23,35 +23,23 @@ export interface Token extends SyntaxNode {
 
 export type KeywordType = 'StringKeyword' | 'NumberKeyword' | 'BooleanKeyword';
 
-export interface BaseType extends SyntaxNode {
+export interface KeywordTypeNode extends SyntaxNode {
   kind: KeywordType;
 }
 
-export interface SetType extends SyntaxNode {
-  kind: 'SetType';
-  valueType: TypeNode;
+export interface TypeReferenceNode extends SyntaxNode {
+  kind: 'TypeReferenceNode';
+  name: Identifier;
+  typeArgs: ReadonlyArray<TypeNode>;
 }
 
-export interface ArrayType extends SyntaxNode {
-  kind: 'ArrayType';
-  valueType: TypeNode;
-}
-
-export interface MapType extends SyntaxNode {
-  kind: 'MapType';
-  keyType: TypeNode;
-  valueType: TypeNode;
-}
-
-export type ContainerType = SetType | MapType | ArrayType;
-
-export type ValueType =
+export type LiteralType =
   | StringLiteral
   | IntegerLiteral
   | FloatLiteral
   | BooleanLiteral;
 
-export type TypeNode = ValueType | BaseType | ContainerType | Identifier;
+export type TypeNode = LiteralType | KeywordTypeNode | TypeReferenceNode;
 
 export interface StringLiteral extends SyntaxNode {
   kind: 'StringLiteral';
@@ -134,9 +122,6 @@ export type Keyword =
   | 'StringKeyword'
   | 'NumberKeyword'
   | 'BooleanKeyword'
-  | 'MapKeyword'
-  | 'SetKeyword'
-  | 'ArrayKeyword'
   | 'TrueKeyword'
   | 'FalseKeyword';
 
@@ -155,7 +140,7 @@ export type Literal =
   | 'FloatLiteral'
   | 'BooleanLiteral';
 
-export type Type = 'SetType' | 'MapType' | 'ArrayType';
+export type Type = 'TypeReferenceNode';
 
 export type CharacterToken =
   | 'CommaToken'

@@ -6,18 +6,20 @@ import {
   Annotations,
 } from '../parser';
 
+export type IndexKind = 'key' | 'index';
+
 export type TableIndex = Readonly<{
-  indexKind: 'autoincrement' | 'index';
+  indexKind: IndexKind;
   name: string;
   type: TypeNode;
 }>;
 
 export function annotationsInclude(
   annotations: ReadonlyArray<Annotation>,
-  name: string,
+  names: ReadonlyArray<string>,
 ): boolean {
   for (const annotation of annotations) {
-    if (annotation.name.value === name) {
+    if (names.includes(annotation.name.value)) {
       return true;
     }
   }
@@ -30,15 +32,15 @@ export function getIndexesForTable(
 ): ReadonlyArray<TableIndex> {
   const indexFields = def.body.filter((next) => {
     return (
-      annotationsInclude(next.annotations, 'autoincrement') ||
-      annotationsInclude(next.annotations, 'index')
+      annotationsInclude(next.annotations, ['autoincrement']) ||
+      annotationsInclude(next.annotations, ['index'])
     );
   });
 
   return indexFields.map((next) => {
     return {
-      indexKind: annotationsInclude(next.annotations, 'autoincrement')
-        ? 'autoincrement'
+      indexKind: annotationsInclude(next.annotations, ['autoincrement'])
+        ? 'key'
         : 'index',
       name: next.name.value,
       type: next.type,
@@ -60,7 +62,7 @@ export function getIndexFieldsForTable(
   def: TableDefinition,
 ): ReadonlyArray<FieldDefinition> {
   return def.body.filter((next) =>
-    annotationsInclude(next.annotations, 'index'),
+    annotationsInclude(next.annotations, ['index']),
   );
 }
 

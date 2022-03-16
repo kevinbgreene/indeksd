@@ -11,7 +11,7 @@ export type Post = {
     name: string;
     content: string;
 };
-export type AuthorsGetArgs = string | {
+export type AuthorsGetArgs = number | {
     name: string;
 } | {
     email: string;
@@ -19,12 +19,32 @@ export type AuthorsGetArgs = string | {
 export type PostsGetArgs = {
     name: string;
 };
+const isAuthorsIdIndex = (arg: AuthorsGetArgs): arg is number => {
+    return typeof arg === "object" && Reflect.has(arg, "id");
+};
+const isAuthorsNameIndex = (arg: AuthorsGetArgs): arg is {
+    name: string;
+} => {
+    return typeof arg === "object" && Reflect.has(arg, "name");
+};
+const isAuthorsEmailIndex = (arg: AuthorsGetArgs): arg is {
+    email: string;
+} => {
+    return typeof arg === "object" && Reflect.has(arg, "email");
+};
+const isPostsNameIndex = (arg: PostsGetArgs): arg is {
+    name: string;
+} => {
+    return typeof arg === "object" && Reflect.has(arg, "name");
+};
 export type MyDatabaseClient = {
     authors: {
         add: (arg: Omit<Authors, "id">) => Promise<Authors>;
+        get: (arg: AuthorsGetArgs) => Promise<Authors>;
     };
     posts: {
         add: (arg: Post) => Promise<Post>;
+        get: (arg: PostsGetArgs) => Promise<Post>;
     };
 };
 function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
@@ -36,11 +56,40 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                     const store = tx.objectStore("Authors");
                     const addRequest: IDBRequest = store.add(arg);
                     addRequest.onerror = event => {
-                        reject(event);
+                        reject((addRequest as IDBRequest).error);
                     };
                     addRequest.onsuccess = event => {
-                        resolve(event.target.result);
+                        resolve((addRequest as IDBRequest).result);
                     };
+                });
+            },
+            get: (arg: AuthorsGetArgs): Promise<Authors> => {
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(["Authors"], "readonly");
+                    const store = tx.objectStore("Authors");
+                    let getRequest: IDBRequest<Authors> | null = null;
+                    if (isAuthorsNameIndex(arg)) {
+                        const index: IDBIndex = store.index("name");
+                        getRequest = index.get(arg.name);
+                    }
+                    else if (isAuthorsEmailIndex(arg)) {
+                        const index: IDBIndex = store.index("email");
+                        getRequest = index.get(arg.email);
+                    }
+                    else {
+                        getRequest = store.get(arg);
+                    }
+                    if (getRequest != null) {
+                        getRequest.onerror = event => {
+                            reject((getRequest as IDBRequest).error);
+                        };
+                        getRequest.onsuccess = event => {
+                            resolve((getRequest as IDBRequest).result);
+                        };
+                    }
+                    else {
+                        reject(new Error("No available index for given query"));
+                    }
                 });
             }
         },
@@ -51,11 +100,33 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                     const store = tx.objectStore("Posts");
                     const addRequest: IDBRequest = store.add(arg);
                     addRequest.onerror = event => {
-                        reject(event);
+                        reject((addRequest as IDBRequest).error);
                     };
                     addRequest.onsuccess = event => {
-                        resolve(event.target.result);
+                        resolve((addRequest as IDBRequest).result);
                     };
+                });
+            },
+            get: (arg: PostsGetArgs): Promise<Post> => {
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(["Posts"], "readonly");
+                    const store = tx.objectStore("Posts");
+                    let getRequest: IDBRequest<Post> | null = null;
+                    if (isPostsNameIndex(arg)) {
+                        const index: IDBIndex = store.index("name");
+                        getRequest = index.get(arg.name);
+                    }
+                    if (getRequest != null) {
+                        getRequest.onerror = event => {
+                            reject((getRequest as IDBRequest).error);
+                        };
+                        getRequest.onsuccess = event => {
+                            resolve((getRequest as IDBRequest).result);
+                        };
+                    }
+                    else {
+                        reject(new Error("No available index for given query"));
+                    }
                 });
             }
         }
@@ -63,7 +134,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
 }
 export function init(): Promise<MyDatabaseClient> {
     return new Promise((resolve, reject) => {
-        const DBOpenRequest = globalThis.open("MyDatabase");
+        const DBOpenRequest = globalThis.indexedDB.open("MyDatabase");
         DBOpenRequest.onerror = event => {
             reject("Error opening database: MyDatabase");
         };

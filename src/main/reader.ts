@@ -8,6 +8,7 @@ export function readSourceFile(
 ): ISourceFile {
   for (const sourcePath of searchPaths) {
     const filePath: string = path.resolve(sourcePath, file);
+    console.log({ filePath });
     if (fs.existsSync(filePath)) {
       return {
         type: 'SourceFile',

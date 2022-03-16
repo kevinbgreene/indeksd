@@ -2,9 +2,7 @@ import {
   Annotation,
   FieldDefinition,
   TypeNode,
-  ArrayType,
-  MapType,
-  SetType,
+  TypeReferenceNode,
   SyntaxKind,
   TextLocation,
   Token,
@@ -13,7 +11,6 @@ import {
   TableDefinition,
   TypeDefinition,
   StringLiteral,
-  Expression,
 } from './types';
 
 import * as factory from '../factory';
@@ -28,6 +25,7 @@ function isStartOfDefinition(token: Token): boolean {
   switch (token.kind) {
     case 'DatabaseKeyword':
     case 'TableKeyword':
+    case 'TypeKeyword':
       return true;
 
     default:
@@ -60,10 +58,7 @@ export function createParser(tokens: Array<Token>): Parser {
       }
     }
 
-    return {
-      kind: 'DatabaseSchema',
-      body,
-    };
+    return factory.createDatabaseSchema(body);
   }
 
   // Finds the beginning of the next statement so we can continue parse after error.
@@ -106,8 +101,8 @@ export function createParser(tokens: Array<Token>): Parser {
       `Unable to find identifier for database`,
     );
 
-    const _openBrace: Token | null = consume('LeftBraceToken');
-    const openBrace = requireValue(_openBrace, `Expected opening curly brace`);
+    const openBrace: Token | null = consume('LeftBraceToken');
+    requireValue(openBrace, `Expected opening curly brace`);
 
     const tables: Array<TableDefinition> = parseTableDefinitions();
 
@@ -122,12 +117,11 @@ export function createParser(tokens: Array<Token>): Parser {
       closeBrace.loc.end,
     );
 
-    return {
-      kind: 'DatabaseDefinition',
-      name: factory.createIdentifier(nameToken.text, nameToken.loc),
-      body: tables,
-      loc: location,
-    };
+    return factory.createDatabaseDefinition(
+      factory.createIdentifier(nameToken.text, nameToken.loc),
+      tables,
+      location,
+    );
   }
 
   function parseTableDefinitions(): Array<TableDefinition> {
@@ -180,13 +174,12 @@ export function createParser(tokens: Array<Token>): Parser {
       closeBrace.loc.end,
     );
 
-    return {
-      kind: 'TableDefinition',
-      name: factory.createIdentifier(nameToken.text, nameToken.loc),
-      body: fields,
+    return factory.createTableDefinition(
+      factory.createIdentifier(nameToken.text, nameToken.loc),
+      fields,
       annotations,
-      loc: location,
-    };
+      location,
+    );
   }
 
   // TypeDefinition → 'type ' Identifier '=' TypeNode ('|' TypeNode)* ';'
@@ -219,12 +212,11 @@ export function createParser(tokens: Array<Token>): Parser {
       endLoc.end,
     );
 
-    return {
-      kind: 'TypeDefinition',
-      name: factory.createIdentifier(nameToken.text, nameToken.loc),
-      body: body,
-      loc: location,
-    };
+    return factory.createTypeDefinition(
+      factory.createIdentifier(nameToken.text, nameToken.loc),
+      body,
+      location,
+    );
   }
 
   function parseAnnotations(): ReadonlyArray<Annotation> {
@@ -264,12 +256,11 @@ export function createParser(tokens: Array<Token>): Parser {
 
     const args = parseAnnotationArgs();
 
-    return {
-      kind: 'Annotation',
-      name: factory.createIdentifier(nameToken.text, nameToken.loc),
-      arguments: args,
-      loc: factory.createTextLocation(atToken.loc.start, nameToken.loc.end),
-    };
+    return factory.createAnnotation(
+      factory.createIdentifier(nameToken.text, nameToken.loc),
+      args,
+      factory.createTextLocation(atToken.loc.start, nameToken.loc.end),
+    );
   }
 
   function parseAnnotationArgs(): ReadonlyArray<StringLiteral> {
@@ -333,7 +324,7 @@ export function createParser(tokens: Array<Token>): Parser {
     const colonToken: Token | null = consume('ColonToken');
     requireValue(colonToken, 'Type annotation expected for field');
 
-    const type: TypeNode = parseFieldType();
+    const type: TypeNode = parseTypeNode();
     const _semicolon: Token | null = consume('SemicolonToken');
     const semicolon: Token = requireValue(
       _semicolon,
@@ -347,20 +338,19 @@ export function createParser(tokens: Array<Token>): Parser {
       endLoc.end,
     );
 
-    return {
-      kind: 'FieldDefinition',
-      name: factory.createIdentifier(nameToken.text, nameToken.loc),
+    return factory.createFieldDefinition(
+      factory.createIdentifier(nameToken.text, nameToken.loc),
       annotations,
       type,
-      loc: location,
-    };
+      location,
+    );
   }
 
   function parseTypeNodes(): ReadonlyArray<TypeNode> {
-    const fieldTypes: Array<TypeNode> = [];
+    const typeNodes: Array<TypeNode> = [];
 
     while (!check('SemicolonToken')) {
-      fieldTypes.push(parseFieldType());
+      typeNodes.push(parseTypeNode());
       consume('PipeToken');
 
       if (isStartOfDefinition(currentToken())) {
@@ -372,39 +362,36 @@ export function createParser(tokens: Array<Token>): Parser {
       }
     }
 
-    return fieldTypes;
+    return typeNodes;
   }
 
   // TypeNode → Identifier | BaseType | ContainerType
-  function parseFieldType(): TypeNode {
-    const typeToken: Token = advance();
+  function parseTypeNode(): TypeNode {
+    const typeToken: Token = currentToken();
     switch (typeToken.kind) {
       case 'Identifier':
-        return factory.createIdentifier(typeToken.text, typeToken.loc);
-
-      case 'MapKeyword':
-        return parseMapType();
-
-      case 'ArrayKeyword':
-        return parseArrayType();
-
-      case 'SetKeyword':
-        return parseSetType();
+        return parseTypeReferenceNode();
 
       case 'BooleanKeyword':
       case 'StringKeyword':
       case 'NumberKeyword':
+        advance();
         return factory.createKeywordFieldType(typeToken.kind, typeToken.loc);
 
       case 'StringLiteral':
+        advance();
         return factory.createStringLiteral(typeToken.text, typeToken.loc);
       case 'IntegerLiteral':
+        advance();
         return factory.createIntegerLiteral(typeToken.text, typeToken.loc);
       case 'FloatLiteral':
+        advance();
         return factory.createFloatLiteral(typeToken.text, typeToken.loc);
       case 'TrueKeyword':
+        advance();
         return factory.createBooleanLiteral(true, typeToken.loc);
       case 'FalseKeyword':
+        advance();
         return factory.createBooleanLiteral(false, typeToken.loc);
 
       default:
@@ -412,84 +399,49 @@ export function createParser(tokens: Array<Token>): Parser {
     }
   }
 
-  // MapType → 'Map<' TypeNode ',' TypeNode '>'
-  function parseMapType(): MapType {
-    const _openBracket: Token | null = consume('LessThanToken');
-    const openBracket: Token = requireValue(
-      _openBracket,
-      `Map needs to defined contained types`,
+  // TypeReferenceNode → Identifier('<' TypeNode (',' TypeNode)* '>')*
+  function parseTypeReferenceNode(): TypeReferenceNode {
+    const _nameToken: Token | null = consume('Identifier');
+    const nameToken: Token = requireValue(
+      _nameToken,
+      `Unable to find identifier for field`,
     );
 
-    const keyType: TypeNode = parseFieldType();
-    const _commaToken: Token | null = consume('CommaToken');
-    requireValue(
-      _commaToken,
-      `Comma expected to separate map types <key, value>`,
-    );
+    let endToken: Token = nameToken;
+    const openBracket: Token | null = consume('LessThanToken');
+    const typeArgs: Array<TypeNode> = [];
+    if (openBracket != null) {
+      while (!check('GreaterThanToken')) {
+        const typeArg: TypeNode = parseTypeNode();
+        typeArgs.push(typeArg);
 
-    const valueType: TypeNode = parseFieldType();
-    const _closeBracket: Token | null = consume('GreaterThanToken');
-    const closeBracket: Token = requireValue(
-      _closeBracket,
-      `Map needs to defined contained types`,
-    );
+        if (check('GreaterThanToken')) {
+          const commaToken: Token | null = consume('GreaterThanToken');
+          requireValue(
+            commaToken,
+            `Type variables must be separated by a comma`,
+          );
+        }
+      }
+
+      const _closeBracket: Token | null = consume('GreaterThanToken');
+      const closeBracket: Token = requireValue(
+        _closeBracket,
+        `Map needs to defined contained types`,
+      );
+      endToken = closeBracket;
+    }
 
     const location: TextLocation = {
-      start: openBracket.loc.start,
-      end: closeBracket.loc.end,
+      start: nameToken.loc.start,
+      end: endToken.loc.end,
     };
 
-    return factory.createMapFieldType(keyType, valueType, location);
-  }
-
-  // SetType → 'Set<' TypeNode '>'
-  function parseSetType(): SetType {
-    const _openBracket: Token | null = consume('LessThanToken');
-    const openBracket: Token = requireValue(
-      _openBracket,
-      `Map needs to defined contained types`,
+    return factory.createTypeReferenceNode(
+      factory.createIdentifier(nameToken.text, nameToken.loc),
+      typeArgs,
+      location,
     );
-
-    const valueType: TypeNode = parseFieldType();
-    const _closeBracket: Token | null = consume('GreaterThanToken');
-    const closeBracket: Token = requireValue(
-      _closeBracket,
-      `Map needs to defined contained types`,
-    );
-
-    return {
-      kind: 'SetType',
-      valueType,
-      loc: {
-        start: openBracket.loc.start,
-        end: closeBracket.loc.end,
-      },
-    };
-  }
-
-  // ArrayType → 'Array<' TypeNode '>'
-  function parseArrayType(): ArrayType {
-    const _openBracket: Token | null = consume('LessThanToken');
-    const openBracket: Token = requireValue(
-      _openBracket,
-      `Map needs to defined contained types`,
-    );
-
-    const valueType: TypeNode = parseFieldType();
-    const _closeBracket: Token | null = consume('GreaterThanToken');
-    const closeBracket: Token = requireValue(
-      _closeBracket,
-      `Map needs to defined contained types`,
-    );
-
-    return {
-      kind: 'ArrayType',
-      valueType,
-      loc: {
-        start: openBracket.loc.start,
-        end: closeBracket.loc.end,
-      },
-    };
   }
 
   function currentToken(): Token {
@@ -516,16 +468,16 @@ export function createParser(tokens: Array<Token>): Parser {
     return false;
   }
 
-  // Does the current token match the given text
-  function checkText(...strs: Array<string>): boolean {
-    for (const str of strs) {
-      if (str === currentToken().text) {
-        return true;
-      }
-    }
+  // // Does the current token match the given text
+  // function checkText(...strs: Array<string>): boolean {
+  //   for (const str of strs) {
+  //     if (str === currentToken().text) {
+  //       return true;
+  //     }
+  //   }
 
-    return false;
-  }
+  //   return false;
+  // }
 
   // requireToken the current token to match given type and advance, otherwise return null
   function consume(...types: ReadonlyArray<SyntaxKind>): Token | null {
@@ -551,11 +503,11 @@ export function createParser(tokens: Array<Token>): Parser {
     return currentIndex >= tokens.length || currentToken().kind === 'EOF';
   }
 
-  function getComments(): Array<Comment> {
-    const current: Array<Comment> = comments;
-    comments = [];
-    return current;
-  }
+  // function getComments(): Array<Comment> {
+  //   const current: Array<Comment> = comments;
+  //   comments = [];
+  //   return current;
+  // }
 
   function reportError(msg: string): Error {
     return new ParseError(msg, currentToken().loc);
