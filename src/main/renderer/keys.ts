@@ -1,3 +1,4 @@
+import * as ts from 'typescript';
 import {
   FieldDefinition,
   TypeNode,
@@ -5,8 +6,9 @@ import {
   Annotation,
   Annotations,
 } from '../parser';
+import { typeForTypeNode } from './types';
 
-export type IndexKind = 'key' | 'index';
+export type IndexKind = 'autoincrement' | 'key' | 'index';
 
 export type TableIndex = Readonly<{
   indexKind: IndexKind;
@@ -14,32 +16,40 @@ export type TableIndex = Readonly<{
   type: TypeNode;
 }>;
 
-export function annotationsInclude(
+export function doAnnotationsInclude(
   annotations: ReadonlyArray<Annotation>,
   names: ReadonlyArray<string>,
 ): boolean {
+  return annotationsFromList(annotations, names) != null;
+}
+
+export function annotationsFromList(
+  annotations: ReadonlyArray<Annotation>,
+  names: ReadonlyArray<string>,
+): string | null {
   for (const annotation of annotations) {
     if (names.includes(annotation.name.value)) {
-      return true;
+      return annotation.name.value;
     }
   }
 
-  return false;
+  return null;
 }
 
 export function getIndexesForTable(
   def: TableDefinition,
 ): ReadonlyArray<TableIndex> {
   const indexFields = def.body.filter((next) => {
-    return (
-      annotationsInclude(next.annotations, ['autoincrement']) ||
-      annotationsInclude(next.annotations, ['index'])
-    );
+    return annotationsFromList(next.annotations, [
+      'autoincrement',
+      'index',
+      'key',
+    ]);
   });
 
   return indexFields.map((next) => {
     return {
-      indexKind: annotationsInclude(next.annotations, ['autoincrement'])
+      indexKind: annotationsFromList(next.annotations, ['autoincrement', 'key'])
         ? 'key'
         : 'index',
       name: next.name.value,
@@ -48,21 +58,47 @@ export function getIndexesForTable(
   });
 }
 
-export function autoincrementFieldsForTable(
+export function getAutoIncrementFieldForTable(
   def: TableDefinition,
-): ReadonlyArray<FieldDefinition> {
-  return def.body.filter((field) =>
-    field.annotations.find(
-      (annotation) => annotation?.name.value === 'autoincrement',
-    ),
-  );
+): FieldDefinition | null {
+  const keys = def.body.filter((field) => {
+    return annotationsFromList(field.annotations, ['autoincrement']);
+  });
+
+  if (keys.length > 1) {
+    throw new Error(
+      `Only one autoincrement key is supported per table, but found ${keys.length}`,
+    );
+  }
+
+  return keys.length ? keys[0] : null;
+}
+
+export function isAutoIncrementField(def: FieldDefinition): boolean {
+  return doAnnotationsInclude(def.annotations, ['autoincrement']);
+}
+
+export function getPrimaryKeyFieldForTable(
+  def: TableDefinition,
+): FieldDefinition {
+  const keys = def.body.filter((field) => {
+    return annotationsFromList(field.annotations, ['autoincrement', 'key']);
+  });
+
+  if (keys.length > 1) {
+    throw new Error(
+      `Only one primary key is supported per table, but found ${keys.length}`,
+    );
+  }
+
+  return keys[0];
 }
 
 export function getIndexFieldsForTable(
   def: TableDefinition,
 ): ReadonlyArray<FieldDefinition> {
   return def.body.filter((next) =>
-    annotationsInclude(next.annotations, ['index']),
+    annotationsFromList(next.annotations, ['index']),
   );
 }
 
@@ -73,4 +109,9 @@ export function getAnnotationsByName(
   return annotations.filter((next) => {
     return next.name.value === name;
   });
+}
+
+export function getPrimaryKeyTypeForTable(def: TableDefinition): ts.TypeNode {
+  const keyField = getPrimaryKeyFieldForTable(def);
+  return typeForTypeNode(keyField.type);
 }

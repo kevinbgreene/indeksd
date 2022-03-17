@@ -7,7 +7,7 @@ import {
   createNewPromiseWithBody,
 } from '../helpers';
 import { getIndexesForTable, TableIndex } from '../keys';
-import { createNumberType, typeForTypeNode } from '../types';
+import { typeForTypeNode } from '../types';
 import { capitalize } from '../utils';
 import { createOnErrorHandler, createOnSuccessHandler } from './common';
 import { createGetObjectStore } from './objectStore';
@@ -20,6 +20,10 @@ export function createGetArgsTypeName(def: TableDefinition): string {
 
 function createGetArgsTypeNode(def: TableDefinition): ts.TypeNode {
   return ts.factory.createTypeReferenceNode(createGetArgsTypeName(def));
+}
+
+function createItemTypeNodeForTable(def: TableDefinition): ts.TypeNode {
+  return ts.factory.createTypeReferenceNode(getItemNameForTable(def));
 }
 
 export function createGetMethodTypeNode(def: TableDefinition): ts.TypeNode {
@@ -36,7 +40,7 @@ export function createGetMethodTypeNode(def: TableDefinition): ts.TypeNode {
       ),
     ],
     ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
-      ts.factory.createTypeReferenceNode(getItemNameForTable(def)),
+      createItemTypeNodeForTable(def),
     ]),
   );
 }
@@ -58,7 +62,7 @@ export function createGetMethod(def: TableDefinition): ts.PropertyAssignment {
         ),
       ],
       ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
-        ts.factory.createTypeReferenceNode(getItemNameForTable(def)),
+        createItemTypeNodeForTable(def),
       ]),
       undefined,
       ts.factory.createBlock(
@@ -82,6 +86,96 @@ export function createGetMethod(def: TableDefinition): ts.PropertyAssignment {
   );
 }
 
+function createHandlingForIndexGet(
+  def: TableDefinition,
+  tableIndex: TableIndex,
+  remaining: ReadonlyArray<TableIndex>,
+  keys: ReadonlyArray<TableIndex>,
+): ts.IfStatement {
+  return ts.factory.createIfStatement(
+    ts.factory.createCallExpression(
+      ts.factory.createIdentifier(createPredicateNameForIndex(def, tableIndex)),
+      undefined,
+      [ts.factory.createIdentifier('arg')],
+    ),
+    ts.factory.createBlock(
+      [
+        createConstStatement(
+          ts.factory.createIdentifier('index'),
+          ts.factory.createTypeReferenceNode('IDBIndex', undefined),
+          ts.factory.createCallExpression(
+            ts.factory.createPropertyAccessExpression(
+              ts.factory.createIdentifier('store'),
+              'index',
+            ),
+            undefined,
+            [ts.factory.createStringLiteral(tableIndex.name)],
+          ),
+        ),
+        ts.factory.createExpressionStatement(
+          ts.factory.createAssignment(
+            COMMON_IDENTIFIERS.getRequest,
+            ts.factory.createCallExpression(
+              ts.factory.createPropertyAccessExpression(
+                ts.factory.createIdentifier('index'),
+                'get',
+              ),
+              undefined,
+              [
+                ts.factory.createPropertyAccessExpression(
+                  ts.factory.createIdentifier('arg'),
+                  tableIndex.name,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+      true,
+    ),
+    createConditionsForIndexes(def, remaining, keys)[0],
+  );
+}
+
+function createHandlingForPrimaryKeyGet(
+  def: TableDefinition,
+  tableIndex: TableIndex,
+  remaining: ReadonlyArray<TableIndex>,
+  keys: ReadonlyArray<TableIndex>,
+): ts.IfStatement {
+  return ts.factory.createIfStatement(
+    ts.factory.createCallExpression(
+      ts.factory.createIdentifier(createPredicateNameForIndex(def, tableIndex)),
+      undefined,
+      [ts.factory.createIdentifier('arg')],
+    ),
+    ts.factory.createBlock(
+      [
+        ts.factory.createExpressionStatement(
+          ts.factory.createAssignment(
+            COMMON_IDENTIFIERS.getRequest,
+            ts.factory.createCallExpression(
+              ts.factory.createPropertyAccessExpression(
+                ts.factory.createIdentifier('store'),
+                'get',
+              ),
+              undefined,
+              [
+                ts.factory.createPropertyAccessExpression(
+                  ts.factory.createIdentifier('arg'),
+                  tableIndex.name,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+      true,
+    ),
+    createConditionsForIndexes(def, remaining, keys)[0],
+  );
+}
+
 function createConditionsForIndexes(
   def: TableDefinition,
   indexes: ReadonlyArray<TableIndex>,
@@ -89,51 +183,11 @@ function createConditionsForIndexes(
 ): ReadonlyArray<ts.Statement> {
   if (indexes.length > 0) {
     const [next, ...remaining] = indexes;
-    return [
-      ts.factory.createIfStatement(
-        ts.factory.createCallExpression(
-          ts.factory.createIdentifier(createPredicateNameForIndex(def, next)),
-          undefined,
-          [ts.factory.createIdentifier('arg')],
-        ),
-        ts.factory.createBlock(
-          [
-            createConstStatement(
-              ts.factory.createIdentifier('index'),
-              ts.factory.createTypeReferenceNode('IDBIndex', undefined),
-              ts.factory.createCallExpression(
-                ts.factory.createPropertyAccessExpression(
-                  ts.factory.createIdentifier('store'),
-                  'index',
-                ),
-                undefined,
-                [ts.factory.createStringLiteral(next.name)],
-              ),
-            ),
-            ts.factory.createExpressionStatement(
-              ts.factory.createAssignment(
-                COMMON_IDENTIFIERS.getRequest,
-                ts.factory.createCallExpression(
-                  ts.factory.createPropertyAccessExpression(
-                    ts.factory.createIdentifier('index'),
-                    'get',
-                  ),
-                  undefined,
-                  [
-                    ts.factory.createPropertyAccessExpression(
-                      ts.factory.createIdentifier('arg'),
-                      next.name,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          true,
-        ),
-        createConditionsForIndexes(def, remaining, keys)[0],
-      ),
-    ];
+    if (isPrimaryKey(next)) {
+      return [createHandlingForPrimaryKeyGet(def, next, remaining, keys)];
+    } else {
+      return [createHandlingForIndexGet(def, next, remaining, keys)];
+    }
   } else if (keys.length > 0) {
     return [
       ts.factory.createBlock(
@@ -163,16 +217,15 @@ function createConditionsForIndexes(
 function createIndexAccessHandling(
   def: TableDefinition,
 ): ReadonlyArray<ts.Statement> {
-  const indexesAndKeys = getIndexesForTable(def);
-  const indexes = indexesAndKeys.filter((next) => next.indexKind !== 'key');
-  const keys = indexesAndKeys.filter((next) => next.indexKind !== 'index');
+  const indexes = getIndexesForTable(def);
+  const keys = indexes.filter((next) => next.indexKind !== 'index');
 
   return [
     createLetStatement(
       COMMON_IDENTIFIERS.getRequest,
       ts.factory.createUnionTypeNode([
         ts.factory.createTypeReferenceNode('IDBRequest', [
-          ts.factory.createTypeReferenceNode(getItemNameForTable(def)),
+          createItemTypeNodeForTable(def),
         ]),
         ts.factory.createLiteralTypeNode(ts.factory.createNull()),
       ]),
@@ -187,8 +240,8 @@ function createIndexAccessHandling(
       ),
       ts.factory.createBlock(
         [
-          createOnErrorHandler('getRequest'),
-          createOnSuccessHandler('getRequest'),
+          createOnErrorHandler('getRequest', createItemTypeNodeForTable(def)),
+          createOnSuccessHandler('getRequest', createItemTypeNodeForTable(def)),
         ],
         true,
       ),
@@ -225,6 +278,10 @@ function createPredicateNameForIndex(
   return `is${capitalize(def.name.value)}${capitalize(field.name)}Index`;
 }
 
+function isPrimaryKey(tableIndex: TableIndex): boolean {
+  return ['autoincrement', 'key'].includes(tableIndex.indexKind);
+}
+
 export function createIndexPredicates(
   def: TableDefinition,
 ): ReadonlyArray<ts.Statement> {
@@ -251,7 +308,9 @@ export function createIndexPredicates(
         ts.factory.createTypePredicateNode(
           undefined,
           ts.factory.createIdentifier('arg'),
-          typeNodeForIndex(next),
+          isPrimaryKey(next)
+            ? objectTypeForIndex(next)
+            : typeNodeForIndex(next),
         ),
         undefined,
         ts.factory.createBlock(
@@ -287,19 +346,39 @@ export function createIndexPredicates(
   });
 }
 
+function objectTypeForIndex(index: TableIndex): ts.TypeLiteralNode {
+  return ts.factory.createTypeLiteralNode([
+    ts.factory.createPropertySignature(
+      undefined,
+      ts.factory.createIdentifier(index.name),
+      undefined,
+      typeForTypeNode(index.type),
+    ),
+  ]);
+}
+
+function typeNodesForIndex(index: TableIndex): ReadonlyArray<ts.TypeNode> {
+  switch (index.indexKind) {
+    case 'autoincrement':
+    case 'key':
+      return [typeForTypeNode(index.type), objectTypeForIndex(index)];
+    case 'index':
+      return [objectTypeForIndex(index)];
+    default:
+      const _exhaustiveCheck: never = index.indexKind;
+      throw new Error(
+        `Non-exhaustive check for index kind ${_exhaustiveCheck}`,
+      );
+  }
+}
+
 function typeNodeForIndex(index: TableIndex): ts.TypeNode {
   switch (index.indexKind) {
+    case 'autoincrement':
     case 'key':
-      return createNumberType();
+      return typeForTypeNode(index.type);
     case 'index':
-      return ts.factory.createTypeLiteralNode([
-        ts.factory.createPropertySignature(
-          undefined,
-          ts.factory.createIdentifier(index.name),
-          undefined,
-          typeForTypeNode(index.type),
-        ),
-      ]);
+      return objectTypeForIndex(index);
     default:
       const _exhaustiveCheck: never = index.indexKind;
       throw new Error(
@@ -311,16 +390,14 @@ function typeNodeForIndex(index: TableIndex): ts.TypeNode {
 export function createGetArgsType(
   def: TableDefinition,
 ): ts.TypeAliasDeclaration {
-  const indexes = getIndexesForTable(def);
-
   return ts.factory.createTypeAliasDeclaration(
     undefined,
     [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
     ts.factory.createIdentifier(createGetArgsTypeName(def)),
     [],
     ts.factory.createUnionTypeNode(
-      indexes.map((next) => {
-        return typeNodeForIndex(next);
+      getIndexesForTable(def).flatMap((next) => {
+        return typeNodesForIndex(next);
       }),
     ),
   );

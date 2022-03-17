@@ -2,11 +2,20 @@ import * as ts from 'typescript';
 import { COMMON_IDENTIFIERS } from '../../identifiers';
 import { TableDefinition } from '../../parser';
 import { createConstStatement, createNewPromiseWithBody } from '../helpers';
-import { autoincrementFieldsForTable } from '../keys';
+import {
+  getAutoIncrementFieldForTable,
+  getPrimaryKeyTypeForTable,
+} from '../keys';
 import { createOnErrorHandler, createOnSuccessHandler } from './common';
 import { createGetObjectStore } from './objectStore';
 import { createTransactionWithMode } from './transaction';
 import { getItemNameForTable } from './type';
+
+function addMethodReturnType(def: TableDefinition): ts.TypeNode {
+  return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
+    getPrimaryKeyTypeForTable(def),
+  ]);
+}
 
 export function createAddMethod(def: TableDefinition): ts.PropertyAssignment {
   return ts.factory.createPropertyAssignment(
@@ -24,9 +33,7 @@ export function createAddMethod(def: TableDefinition): ts.PropertyAssignment {
           createAddArgTypeNode(def),
         ),
       ],
-      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
-        ts.factory.createTypeReferenceNode(getItemNameForTable(def)),
-      ]),
+      addMethodReturnType(def),
       undefined,
       ts.factory.createBlock(
         [
@@ -62,24 +69,21 @@ export function createAddMethodTypeNode(def: TableDefinition): ts.TypeNode {
         createAddArgTypeNode(def),
       ),
     ],
-    ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
-      ts.factory.createTypeReferenceNode(getItemNameForTable(def)),
-    ]),
+    addMethodReturnType(def),
   );
 }
 
 function createAddArgTypeNode(def: TableDefinition): ts.TypeNode {
-  const autoincrementFields = autoincrementFieldsForTable(def);
+  const autoIncrementField = getAutoIncrementFieldForTable(def);
   const typeReferencNode = ts.factory.createTypeReferenceNode(
     getItemNameForTable(def),
   );
 
-  if (autoincrementFields.length > 0) {
-    const autoincrementField = autoincrementFields[0];
+  if (autoIncrementField != null) {
     return ts.factory.createTypeReferenceNode('Omit', [
       typeReferencNode,
       ts.factory.createLiteralTypeNode(
-        ts.factory.createStringLiteral(autoincrementField.name.value),
+        ts.factory.createStringLiteral(autoIncrementField.name.value),
       ),
     ]);
   }
@@ -103,7 +107,7 @@ function createAddRequestHandling(
         [ts.factory.createIdentifier('arg')],
       ),
     ),
-    createOnErrorHandler('addRequest'),
-    createOnSuccessHandler('addRequest'),
+    createOnErrorHandler('addRequest', getPrimaryKeyTypeForTable(def)),
+    createOnSuccessHandler('addRequest', getPrimaryKeyTypeForTable(def)),
   ];
 }

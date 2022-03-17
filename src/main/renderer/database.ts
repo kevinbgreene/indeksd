@@ -18,9 +18,10 @@ import {
   createParameterDeclaration,
 } from './helpers';
 import {
-  annotationsInclude,
-  autoincrementFieldsForTable,
+  annotationsFromList,
+  getPrimaryKeyFieldForTable,
   getIndexFieldsForTable,
+  isAutoIncrementField,
 } from './keys';
 import { createBooleanLiteral, typeForTypeNode } from './types';
 
@@ -164,21 +165,24 @@ function createObjectStores(
 function createOptionsForObjectStore(
   def: TableDefinition,
 ): ts.ObjectLiteralExpression {
-  const autoincrementFields = autoincrementFieldsForTable(def);
-  if (autoincrementFields.length > 1) {
-    throw new Error(
-      `Only one field can be set as autoincrement but found ${autoincrementFields.length} in ${def.name.value}`,
+  const primaryKeyField = getPrimaryKeyFieldForTable(def);
+  const options = [
+    ts.factory.createPropertyAssignment(
+      ts.factory.createIdentifier('keyPath'),
+      ts.factory.createStringLiteral(primaryKeyField.name.value),
+    ),
+  ];
+
+  if (isAutoIncrementField(primaryKeyField)) {
+    options.push(
+      ts.factory.createPropertyAssignment(
+        ts.factory.createIdentifier('autoIncrement'),
+        ts.factory.createTrue(),
+      ),
     );
   }
 
-  return ts.factory.createObjectLiteralExpression(
-    autoincrementFields.map((next) => {
-      return ts.factory.createPropertyAssignment(
-        ts.factory.createIdentifier('keyPath'),
-        ts.factory.createStringLiteral(next.name.value),
-      );
-    }),
-  );
+  return ts.factory.createObjectLiteralExpression(options);
 }
 
 function createObjectStoreIndexes(
@@ -212,7 +216,8 @@ function createIndexesForStore(
 }
 
 function optionsForIndex(def: FieldDefinition): ts.ObjectLiteralExpression {
-  const isFieldUnique = annotationsInclude(def.annotations, ['unique']);
+  const isFieldUnique =
+    annotationsFromList(def.annotations, ['unique']) != null;
   return ts.factory.createObjectLiteralExpression([
     ts.factory.createPropertyAssignment(
       ts.factory.createIdentifier('unique'),

@@ -11,7 +11,7 @@ export function generateProject(
     // Index file for this namespace
     result.push({
       type: 'GeneratedFile',
-      name: 'index',
+      name: file.sourceFile.name,
       ext: 'ts',
       path: file.sourceFile.path,
       body: renderDefinitions(file.body),

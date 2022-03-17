@@ -8,18 +8,25 @@ export type Authors = {
     email: string;
 };
 export type Post = {
+    postId: string;
     name: string;
     content: string;
 };
 export type AuthorsGetArgs = number | {
+    id: number;
+} | {
     name: string;
 } | {
     email: string;
 };
-export type PostsGetArgs = {
+export type PostsGetArgs = string | {
+    postId: string;
+} | {
     name: string;
 };
-const isAuthorsIdIndex = (arg: AuthorsGetArgs): arg is number => {
+const isAuthorsIdIndex = (arg: AuthorsGetArgs): arg is {
+    id: number;
+} => {
     return typeof arg === "object" && Reflect.has(arg, "id");
 };
 const isAuthorsNameIndex = (arg: AuthorsGetArgs): arg is {
@@ -32,6 +39,11 @@ const isAuthorsEmailIndex = (arg: AuthorsGetArgs): arg is {
 } => {
     return typeof arg === "object" && Reflect.has(arg, "email");
 };
+const isPostsPostIdIndex = (arg: PostsGetArgs): arg is {
+    postId: string;
+} => {
+    return typeof arg === "object" && Reflect.has(arg, "postId");
+};
 const isPostsNameIndex = (arg: PostsGetArgs): arg is {
     name: string;
 } => {
@@ -39,27 +51,27 @@ const isPostsNameIndex = (arg: PostsGetArgs): arg is {
 };
 export type MyDatabaseClient = {
     authors: {
-        add: (arg: Omit<Authors, "id">) => Promise<Authors>;
+        add: (arg: Omit<Authors, "id">) => Promise<number>;
         get: (arg: AuthorsGetArgs) => Promise<Authors>;
     };
     posts: {
-        add: (arg: Post) => Promise<Post>;
+        add: (arg: Post) => Promise<string>;
         get: (arg: PostsGetArgs) => Promise<Post>;
     };
 };
 function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
     return {
         authors: {
-            add: (arg: Omit<Authors, "id">): Promise<Authors> => {
+            add: (arg: Omit<Authors, "id">): Promise<number> => {
                 return new Promise((resolve, reject) => {
                     const tx = db.transaction(["Authors"], "readwrite");
                     const store = tx.objectStore("Authors");
                     const addRequest: IDBRequest = store.add(arg);
                     addRequest.onerror = event => {
-                        reject((addRequest as IDBRequest).error);
+                        reject((addRequest as IDBRequest<number>).error);
                     };
                     addRequest.onsuccess = event => {
-                        resolve((addRequest as IDBRequest).result);
+                        resolve((addRequest as IDBRequest<number>).result);
                     };
                 });
             },
@@ -68,7 +80,10 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                     const tx = db.transaction(["Authors"], "readonly");
                     const store = tx.objectStore("Authors");
                     let getRequest: IDBRequest<Authors> | null = null;
-                    if (isAuthorsNameIndex(arg)) {
+                    if (isAuthorsIdIndex(arg)) {
+                        getRequest = store.get(arg.id);
+                    }
+                    else if (isAuthorsNameIndex(arg)) {
                         const index: IDBIndex = store.index("name");
                         getRequest = index.get(arg.name);
                     }
@@ -81,10 +96,10 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                     }
                     if (getRequest != null) {
                         getRequest.onerror = event => {
-                            reject((getRequest as IDBRequest).error);
+                            reject((getRequest as IDBRequest<Authors>).error);
                         };
                         getRequest.onsuccess = event => {
-                            resolve((getRequest as IDBRequest).result);
+                            resolve((getRequest as IDBRequest<Authors>).result);
                         };
                     }
                     else {
@@ -94,16 +109,16 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             }
         },
         posts: {
-            add: (arg: Post): Promise<Post> => {
+            add: (arg: Post): Promise<string> => {
                 return new Promise((resolve, reject) => {
                     const tx = db.transaction(["Posts"], "readwrite");
                     const store = tx.objectStore("Posts");
                     const addRequest: IDBRequest = store.add(arg);
                     addRequest.onerror = event => {
-                        reject((addRequest as IDBRequest).error);
+                        reject((addRequest as IDBRequest<string>).error);
                     };
                     addRequest.onsuccess = event => {
-                        resolve((addRequest as IDBRequest).result);
+                        resolve((addRequest as IDBRequest<string>).result);
                     };
                 });
             },
@@ -112,16 +127,22 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                     const tx = db.transaction(["Posts"], "readonly");
                     const store = tx.objectStore("Posts");
                     let getRequest: IDBRequest<Post> | null = null;
-                    if (isPostsNameIndex(arg)) {
+                    if (isPostsPostIdIndex(arg)) {
+                        getRequest = store.get(arg.postId);
+                    }
+                    else if (isPostsNameIndex(arg)) {
                         const index: IDBIndex = store.index("name");
                         getRequest = index.get(arg.name);
                     }
+                    else {
+                        getRequest = store.get(arg);
+                    }
                     if (getRequest != null) {
                         getRequest.onerror = event => {
-                            reject((getRequest as IDBRequest).error);
+                            reject((getRequest as IDBRequest<Post>).error);
                         };
                         getRequest.onsuccess = event => {
-                            resolve((getRequest as IDBRequest).result);
+                            resolve((getRequest as IDBRequest<Post>).result);
                         };
                     }
                     else {
@@ -144,8 +165,8 @@ export function init(): Promise<MyDatabaseClient> {
         };
         DBOpenRequest.onupgradeneeded = event => {
             const db = DBOpenRequest.result;
-            const AuthorsStore = db.createObjectStore("Authors", { keyPath: "id" });
-            const PostsStore = db.createObjectStore("Posts", {});
+            const AuthorsStore = db.createObjectStore("Authors", { keyPath: "id", autoIncrement: true });
+            const PostsStore = db.createObjectStore("Posts", { keyPath: "postId" });
             AuthorsStore.createIndex("name", "name", { unique: false });
             AuthorsStore.createIndex("email", "email", { unique: true });
             PostsStore.createIndex("name", "name", { unique: false });

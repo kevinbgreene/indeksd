@@ -12,7 +12,10 @@ export function createClientTypeNode(def: DatabaseDefinition): ts.TypeNode {
   return ts.factory.createTypeReferenceNode(createDatabaseClientName(def));
 }
 
-export function createOnErrorHandler(methodName: string): ts.Statement {
+export function createOnErrorHandler(
+  methodName: string,
+  requestType: ts.TypeNode,
+): ts.Statement {
   return ts.factory.createExpressionStatement(
     ts.factory.createAssignment(
       ts.factory.createPropertyAccessExpression(
@@ -37,6 +40,7 @@ export function createOnErrorHandler(methodName: string): ts.Statement {
                       ts.factory.createIdentifier(methodName),
                       ts.factory.createTypeReferenceNode(
                         ts.factory.createIdentifier('IDBRequest'),
+                        [requestType],
                       ),
                     ),
                     'error',
@@ -52,7 +56,10 @@ export function createOnErrorHandler(methodName: string): ts.Statement {
   );
 }
 
-export function createOnSuccessHandler(methodName: string): ts.Statement {
+export function createOnSuccessHandler(
+  methodName: string,
+  requestType: ts.TypeNode,
+): ts.Statement {
   return ts.factory.createExpressionStatement(
     ts.factory.createAssignment(
       ts.factory.createPropertyAccessExpression(
@@ -77,6 +84,7 @@ export function createOnSuccessHandler(methodName: string): ts.Statement {
                       ts.factory.createIdentifier(methodName),
                       ts.factory.createTypeReferenceNode(
                         ts.factory.createIdentifier('IDBRequest'),
+                        [requestType],
                       ),
                     ),
                     'result',
