@@ -39,7 +39,17 @@ export type LiteralType =
   | FloatLiteral
   | BooleanLiteral;
 
-export type TypeNode = LiteralType | KeywordTypeNode | TypeReferenceNode;
+export interface RangeTypeNode extends SyntaxNode {
+  kind: 'RangeTypeNode';
+  startValue: IntegerLiteral;
+  endValue: IntegerLiteral;
+}
+
+export type TypeNode =
+  | LiteralType
+  | KeywordTypeNode
+  | TypeReferenceNode
+  | RangeTypeNode;
 
 export interface StringLiteral extends SyntaxNode {
   kind: 'StringLiteral';
@@ -140,7 +150,7 @@ export type Literal =
   | 'FloatLiteral'
   | 'BooleanLiteral';
 
-export type Type = 'TypeReferenceNode';
+export type Type = 'TypeReferenceNode' | 'RangeTypeNode';
 
 export type CharacterToken =
   | 'CommaToken'
@@ -154,7 +164,8 @@ export type CharacterToken =
   | 'LessThanToken'
   | 'AtToken'
   | 'PipeToken'
-  | 'EqualToken';
+  | 'EqualToken'
+  | 'DotDotToken';
 
 export type EndOfFile = 'EOF';
 

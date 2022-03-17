@@ -11,6 +11,7 @@ import {
   TableDefinition,
   TypeDefinition,
   StringLiteral,
+  RangeTypeNode,
 } from './types';
 
 import * as factory from '../factory';
@@ -382,8 +383,12 @@ export function createParser(tokens: Array<Token>): Parser {
         advance();
         return factory.createStringLiteral(typeToken.text, typeToken.loc);
       case 'IntegerLiteral':
-        advance();
-        return factory.createIntegerLiteral(typeToken.text, typeToken.loc);
+        if (peek().kind === 'DotDotToken') {
+          return parseRangeTypeNode();
+        } else {
+          advance();
+          return factory.createIntegerLiteral(typeToken.text, typeToken.loc);
+        }
       case 'FloatLiteral':
         advance();
         return factory.createFloatLiteral(typeToken.text, typeToken.loc);
@@ -397,6 +402,29 @@ export function createParser(tokens: Array<Token>): Parser {
       default:
         throw reportError(`TypeNode expected but found: ${typeToken.kind}`);
     }
+  }
+
+  function parseRangeTypeNode(): RangeTypeNode {
+    const _startValue = consume('IntegerLiteral');
+    const startValue = requireValue(
+      _startValue,
+      'Expected start value for range',
+    );
+    const dotDotToken = consume('DotDotToken');
+    requireValue(dotDotToken, 'Expected range operator');
+    const _endValue = consume('IntegerLiteral');
+    const endValue = requireValue(_endValue, 'Expected end value for range');
+
+    const location = factory.createTextLocation(
+      startValue.loc.start,
+      endValue.loc.end,
+    );
+
+    return factory.createRangeTypeNode(
+      factory.createIntegerLiteral(startValue.text, startValue.loc),
+      factory.createIntegerLiteral(endValue.text, endValue.loc),
+      location,
+    );
   }
 
   // TypeReferenceNode → Identifier('<' TypeNode (',' TypeNode)* '>')*

@@ -1,6 +1,6 @@
 import * as ts from 'typescript';
 import { COMMON_IDENTIFIERS } from '../identifiers';
-import { TypeNode } from '../parser/types';
+import { RangeTypeNode, TypeNode } from '../parser/types';
 
 export function typeForTypeNode(typeNode: TypeNode): ts.TypeNode {
   switch (typeNode.kind) {
@@ -9,6 +9,9 @@ export function typeForTypeNode(typeNode: TypeNode): ts.TypeNode {
         typeNode.name.value,
         typeNode.typeArgs.map(typeForTypeNode),
       );
+
+    case 'RangeTypeNode':
+      return createRangeType(typeNode);
 
     case 'StringKeyword':
       return createStringType();
@@ -43,6 +46,18 @@ export function typeForTypeNode(typeNode: TypeNode): ts.TypeNode {
       const msg: never = typeNode;
       throw new Error(`Non-exhaustive match for: ${msg}`);
   }
+}
+
+export function createRangeType(typeNode: RangeTypeNode): ts.UnionTypeNode {
+  const rangeTypes = [];
+  const startValue = parseInt(typeNode.startValue.value);
+  const endValue = parseInt(typeNode.endValue.value);
+  for (let i = startValue; i <= endValue; i++) {
+    rangeTypes.push(
+      ts.factory.createLiteralTypeNode(ts.factory.createNumericLiteral(i)),
+    );
+  }
+  return ts.factory.createUnionTypeNode(rangeTypes);
 }
 
 export function createUndefinedType(): ts.TypeNode {

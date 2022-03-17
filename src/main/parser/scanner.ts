@@ -150,6 +150,13 @@ export function createScanner(src: string) {
         addToken('GreaterThanToken', next);
         break;
 
+      case '.':
+        if (peek() === '.') {
+          advance();
+          addToken('DotDotToken', source.substring(startIndex, currentIndex));
+          break;
+        }
+
       default:
         if (isDigit(next)) {
           number();

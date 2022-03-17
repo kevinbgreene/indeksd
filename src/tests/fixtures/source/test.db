@@ -2,6 +2,7 @@ type Value = 1 | 2 | 3;
 type Value2 = '1' | true | 0.2;
 type Value3 = Value | false;
 type Value4 = 'some';
+type Value5 = 1..10;
 
 database MyDatabase {
 

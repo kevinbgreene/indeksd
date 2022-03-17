@@ -19,6 +19,7 @@ import {
   Annotation,
   FieldDefinition,
   TypeReferenceNode,
+  RangeTypeNode,
 } from './parser/types';
 
 export function createToken(
@@ -123,6 +124,19 @@ export function createTextLocation(
   end: TextPosition,
 ): TextLocation {
   return { start, end };
+}
+
+export function createRangeTypeNode(
+  startValue: IntegerLiteral,
+  endValue: IntegerLiteral,
+  loc: TextLocation,
+): RangeTypeNode {
+  return {
+    kind: 'RangeTypeNode',
+    startValue,
+    endValue,
+    loc,
+  };
 }
 
 export function createTypeReferenceNode(
