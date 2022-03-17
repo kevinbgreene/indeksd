@@ -1,6 +1,6 @@
 {
   "name": "indeksd",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A DSL for defining IndexedDB schemas that compile into a type safe database client.",
   "main": "./dist/main/index.js",
   "bin": {
