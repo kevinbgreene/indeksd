@@ -6,6 +6,9 @@
   "bin": {
     "indeksd": "./dist/main/bin/index.js"
   },
+  "files": [
+    "dist/main"
+  ],
   "keywords": [
     "TypeScript",
     "IndexedDB",
