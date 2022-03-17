@@ -122,8 +122,6 @@ export async function processProject(
     files: mergedOptions.files,
   });
 
-  console.log({ sourceFiles });
-
   return projectFromSourceFiles(sourceFiles, mergedOptions);
 }
 
@@ -131,7 +129,6 @@ export async function generate(
   options: Partial<IMakeOptions> = {},
 ): Promise<void> {
   const project: IIndeksdProject = await processProject(options);
-  console.log({ project });
   const generatedFiles: Array<IGeneratedFile> = generateProject(project);
 
   saveFiles(generatedFiles, project.outDir);

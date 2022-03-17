@@ -11,6 +11,4 @@ const tokens: Array<Token> = scanner.scan();
 const parser: Parser = createParser(tokens);
 const schema: DatabaseSchema = parser.parse();
 
-console.log(JSON.stringify(schema, null, 4));
-
 assert.deepEqual(schema, {});
