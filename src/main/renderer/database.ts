@@ -144,21 +144,26 @@ function createObjectStores(
   def: DatabaseDefinition,
 ): ReadonlyArray<ts.Statement> {
   return def.body.map((next) => {
-    return createConstStatement(
-      identifierForObjectStore(next),
-      undefined,
-      ts.factory.createCallExpression(
-        ts.factory.createPropertyAccessExpression(
-          ts.factory.createIdentifier('db'),
-          ts.factory.createIdentifier('createObjectStore'),
-        ),
-        undefined,
-        [
-          ts.factory.createStringLiteral(next.name.value),
-          createOptionsForObjectStore(next),
-        ],
+    const indexesForTable = getIndexFieldsForTable(next);
+    const objectStore = ts.factory.createCallExpression(
+      ts.factory.createPropertyAccessExpression(
+        ts.factory.createIdentifier('db'),
+        ts.factory.createIdentifier('createObjectStore'),
       ),
+      undefined,
+      [
+        ts.factory.createStringLiteral(next.name.value),
+        createOptionsForObjectStore(next),
+      ],
     );
+
+    return indexesForTable.length > 0
+      ? createConstStatement(
+          identifierForObjectStore(next),
+          undefined,
+          objectStore,
+        )
+      : ts.factory.createExpressionStatement(objectStore);
   });
 }
 

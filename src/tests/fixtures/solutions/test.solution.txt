@@ -22,8 +22,6 @@ export type AuthorsGetArgs = number | {
 };
 export type PostsGetArgs = string | {
     postId: string;
-} | {
-    name: string;
 };
 const isAuthorsIdIndex = (arg: AuthorsGetArgs): arg is {
     id: number;
@@ -44,11 +42,6 @@ const isPostsPostIdIndex = (arg: PostsGetArgs): arg is {
     postId: string;
 } => {
     return typeof arg === "object" && Reflect.has(arg, "postId");
-};
-const isPostsNameIndex = (arg: PostsGetArgs): arg is {
-    name: string;
-} => {
-    return typeof arg === "object" && Reflect.has(arg, "name");
 };
 export type MyDatabaseClient = {
     authors: {
@@ -131,10 +124,6 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                     if (isPostsPostIdIndex(arg)) {
                         getRequest = store.get(arg.postId);
                     }
-                    else if (isPostsNameIndex(arg)) {
-                        const index: IDBIndex = store.index("name");
-                        getRequest = index.get(arg.name);
-                    }
                     else {
                         getRequest = store.get(arg);
                     }
@@ -167,10 +156,9 @@ export function init(): Promise<MyDatabaseClient> {
         DBOpenRequest.onupgradeneeded = event => {
             const db = DBOpenRequest.result;
             const AuthorsStore = db.createObjectStore("Authors", { keyPath: "id", autoIncrement: true });
-            const PostsStore = db.createObjectStore("Posts", { keyPath: "postId" });
+            db.createObjectStore("Posts", { keyPath: "postId" });
             AuthorsStore.createIndex("name", "name", { unique: false });
             AuthorsStore.createIndex("email", "email", { unique: true });
-            PostsStore.createIndex("name", "name", { unique: false });
         };
     });
 }

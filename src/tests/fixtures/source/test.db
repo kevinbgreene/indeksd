@@ -14,7 +14,7 @@ database MyDatabase {
 
   table Posts @item("Post") {
     @key postId: string;
-    @index name: string;
+    name: string;
     content: string;
   }
 

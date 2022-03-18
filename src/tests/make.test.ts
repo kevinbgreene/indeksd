@@ -6,4 +6,6 @@ const content = loadSource('test');
 const schema = make(content);
 const expected = loadSolution('test');
 
+console.log({ schema });
+
 assert.deepStrictEqual(schema, expected);
