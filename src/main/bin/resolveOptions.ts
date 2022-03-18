@@ -1,6 +1,6 @@
 import { lstatSync } from 'fs';
 
-import { DEFAULT_OPTIONS } from '../defaults';
+import { DEFAULT_OPTIONS } from '../options';
 import { IMakeOptions } from '../types';
 import { deepCopy } from '../utils';
 

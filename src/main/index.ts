@@ -1,5 +1,5 @@
 import * as path from 'node:path';
-import { mergeWithDefaults } from './defaults';
+import { mergeWithDefaults } from './options';
 import {
   IIndeksdProject,
   IGeneratedFile,

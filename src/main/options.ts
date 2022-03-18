@@ -4,7 +4,7 @@ import { deepMerge } from './utils';
 export const DEFAULT_OPTIONS: IMakeOptions = {
   rootDir: '.',
   outDir: './codegen',
-  sourceDir: './indeksd',
+  sourceDir: './schemas',
   files: [],
 };
 
