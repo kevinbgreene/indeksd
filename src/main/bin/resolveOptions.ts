@@ -9,12 +9,13 @@ import { deepCopy } from '../utils';
  *
  * --rootDir
  * --outDir
+ * --sourceDir
  */
 export function resolveOptions(args: Array<string>): IMakeOptions {
   const len: number = args.length;
   let index: number = 0;
   const options: IMakeOptions = deepCopy(DEFAULT_OPTIONS);
-  const files = [];
+  const files: Array<string> = [];
 
   while (index < len) {
     const next: string = args[index];
