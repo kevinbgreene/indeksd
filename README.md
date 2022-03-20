@@ -82,3 +82,22 @@ export type PostsGetArgs = number | {
   author: string;
 };
 ```
+
+A type is also generated for the objects stored in our object store. By default the type name is the same as the table name. However, if you want to define a different name you can use the @item annotation to define a name. In our example we called the table "Posts", but wanted items in the table to use the singular "Post".
+
+For our example this would be generated as:
+
+```
+export type Post = {
+  id: number;
+  title: string;
+  content: string;
+  author: string;
+};
+```
+
+You can import this type from the generated file.
+
+```
+import {init, Post} from './codegen/blog';
+```
