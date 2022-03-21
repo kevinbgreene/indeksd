@@ -20,6 +20,8 @@ import {
   FieldDefinition,
   TypeReferenceNode,
   RangeTypeNode,
+  PropertySignature,
+  ObjectLiteralTypeNode,
 } from './parser/types';
 
 export function createToken(
@@ -135,6 +137,30 @@ export function createRangeTypeNode(
     kind: 'RangeTypeNode',
     startValue,
     endValue,
+    loc,
+  };
+}
+
+export function createObjectLiteralTypeNode(
+  members: ReadonlyArray<PropertySignature>,
+  loc: TextLocation,
+): ObjectLiteralTypeNode {
+  return {
+    kind: 'ObjectLiteralTypeNode',
+    members,
+    loc,
+  };
+}
+
+export function createPropertySignature(
+  name: Identifier,
+  type: TypeNode,
+  loc: TextLocation,
+): PropertySignature {
+  return {
+    kind: 'PropertySignature',
+    name,
+    type,
     loc,
   };
 }

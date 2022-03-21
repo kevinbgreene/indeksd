@@ -15,6 +15,18 @@ export function typeForTypeNode(typeNode: TypeNode): ts.TypeNode {
         typeNode.typeArgs.map(typeForTypeNode),
       );
 
+    case 'ObjectLiteralTypeNode':
+      return ts.factory.createTypeLiteralNode(
+        typeNode.members.map((next) => {
+          return ts.factory.createPropertySignature(
+            undefined,
+            ts.factory.createIdentifier(next.name.value),
+            undefined,
+            typeForTypeNode(next.type),
+          );
+        }),
+      );
+
     case 'RangeTypeNode':
       return createRangeType(typeNode);
 

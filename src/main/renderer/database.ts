@@ -10,7 +10,11 @@ import {
   createClientTypeDeclaration,
   createClientTypeNode,
 } from './client';
-import { createGetArgsType, createIndexPredicates } from './client/getMethod';
+import { createAddArgsTypeDeclaration } from './client/addMethod';
+import {
+  createGetArgsTypeDeclaration,
+  createIndexPredicates,
+} from './client/getMethod';
 import { getItemNameForTable } from './client/type';
 import {
   createConstStatement,
@@ -52,7 +56,10 @@ export function renderDatabaseDefinition(
       return createItemTypeForTable(next);
     }),
     ...def.body.map((next) => {
-      return createGetArgsType(next);
+      return createAddArgsTypeDeclaration(next);
+    }),
+    ...def.body.map((next) => {
+      return createGetArgsTypeDeclaration(next);
     }),
     ...def.body.flatMap((next) => {
       return createIndexPredicates(next);

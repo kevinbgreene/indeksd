@@ -26,10 +26,7 @@ function parseSchemaString(source: string): DatabaseSchema {
   }
 }
 
-function parseSchemaFromSource(
-  source: string,
-  fallbackNamespace: string,
-): IParsedFile {
+function parseSchemaFromSource(source: string): IParsedFile {
   const sourceFile: ISourceFile = {
     type: 'SourceFile',
     name: '',

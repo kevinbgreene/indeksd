@@ -39,6 +39,21 @@ export type LiteralType =
   | FloatLiteral
   | BooleanLiteral;
 
+export interface PropertySignature extends SyntaxNode {
+  kind: 'PropertySignature';
+  name: Identifier;
+  type: TypeNode;
+}
+
+export interface ObjectLiteralTypeNode extends SyntaxNode {
+  kind: 'ObjectLiteralTypeNode';
+  members: ReadonlyArray<PropertySignature>;
+}
+
+export interface TupleTypeNode extends SyntaxNode {
+  kind: 'TupleTypeNode';
+}
+
 export interface RangeTypeNode extends SyntaxNode {
   kind: 'RangeTypeNode';
   startValue: IntegerLiteral;
@@ -49,7 +64,8 @@ export type TypeNode =
   | LiteralType
   | KeywordTypeNode
   | TypeReferenceNode
-  | RangeTypeNode;
+  | RangeTypeNode
+  | ObjectLiteralTypeNode;
 
 export interface StringLiteral extends SyntaxNode {
   kind: 'StringLiteral';
@@ -150,7 +166,12 @@ export type Literal =
   | 'FloatLiteral'
   | 'BooleanLiteral';
 
-export type Type = 'TypeReferenceNode' | 'RangeTypeNode';
+export type Type =
+  | 'TypeReferenceNode'
+  | 'RangeTypeNode'
+  | 'ObjectLiteralTypeNode'
+  | 'TupleTypeNode'
+  | 'PropertySignature';
 
 export type CharacterToken =
   | 'CommaToken'

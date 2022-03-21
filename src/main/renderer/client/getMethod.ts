@@ -387,7 +387,7 @@ function typeNodeForIndex(index: TableIndex): ts.TypeNode {
   }
 }
 
-export function createGetArgsType(
+export function createGetArgsTypeDeclaration(
   def: TableDefinition,
 ): ts.TypeAliasDeclaration {
   return ts.factory.createTypeAliasDeclaration(

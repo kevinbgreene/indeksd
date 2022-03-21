@@ -12,6 +12,8 @@ import {
   TypeDefinition,
   StringLiteral,
   RangeTypeNode,
+  ObjectLiteralTypeNode,
+  PropertySignature,
 } from './types';
 
 import * as factory from '../factory';
@@ -373,6 +375,9 @@ export function createParser(tokens: Array<Token>): Parser {
       case 'Identifier':
         return parseTypeReferenceNode();
 
+      case 'LeftBraceToken':
+        return parseObjectLiteralTypeNode();
+
       case 'BooleanKeyword':
       case 'StringKeyword':
       case 'NumberKeyword':
@@ -402,6 +407,68 @@ export function createParser(tokens: Array<Token>): Parser {
       default:
         throw reportError(`TypeNode expected but found: ${typeToken.kind}`);
     }
+  }
+
+  function parseObjectLiteralTypeNode(): ObjectLiteralTypeNode {
+    const _openBrace = consume('LeftBraceToken');
+    const openBrace = requireValue(
+      _openBrace,
+      'Expected opening brace for object literal type',
+    );
+
+    const members: Array<PropertySignature> = [];
+
+    while (!check('RightBraceToken')) {
+      const member: PropertySignature = parsePropertySignature();
+      members.push(member);
+      consume('SemicolonToken');
+    }
+
+    const _closeBrace = consume('RightBraceToken');
+    const closeBrace = requireValue(
+      _closeBrace,
+      'Expected closing brace for object literal type',
+    );
+
+    const location = factory.createTextLocation(
+      openBrace.loc.start,
+      closeBrace.loc.end,
+    );
+
+    return factory.createObjectLiteralTypeNode(members, location);
+  }
+
+  function parsePropertySignature(): PropertySignature {
+    const _nameToken = consume('Identifier');
+    const nameToken = requireValue(
+      _nameToken,
+      'Expected identifier for property signature',
+    );
+
+    const _colonToken = consume('ColonToken');
+    requireValue(
+      _colonToken,
+      'Expected colon before type of property signature',
+    );
+
+    const type = parseTypeNode();
+
+    const _semicolon = consume('SemicolonToken');
+    const semicolon = requireValue(
+      _semicolon,
+      'Expected semicolon to terminate property signature',
+    );
+
+    const location = factory.createTextLocation(
+      nameToken.loc.start,
+      semicolon.loc.end,
+    );
+
+    return factory.createPropertySignature(
+      factory.createIdentifier(nameToken.text, nameToken.loc),
+      type,
+      location,
+    );
   }
 
   function parseRangeTypeNode(): RangeTypeNode {

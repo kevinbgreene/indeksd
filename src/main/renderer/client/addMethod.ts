@@ -6,6 +6,7 @@ import {
   getAutoIncrementFieldForTable,
   getPrimaryKeyTypeForTable,
 } from '../keys';
+import { capitalize } from '../utils';
 import { createOnErrorHandler, createOnSuccessHandler } from './common';
 import { createGetObjectStore } from './objectStore';
 import { createTransactionWithMode } from './transaction';
@@ -15,6 +16,40 @@ function addMethodReturnType(def: TableDefinition): ts.TypeNode {
   return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
     getPrimaryKeyTypeForTable(def),
   ]);
+}
+
+export function createAddArgsTypeName(def: TableDefinition): string {
+  return `${capitalize(def.name.value)}AddArgs`;
+}
+
+export function createAddArgsTypeNode(def: TableDefinition): ts.TypeNode {
+  const autoIncrementField = getAutoIncrementFieldForTable(def);
+  const typeReferencNode = ts.factory.createTypeReferenceNode(
+    getItemNameForTable(def),
+  );
+
+  if (autoIncrementField != null) {
+    return ts.factory.createTypeReferenceNode('Omit', [
+      typeReferencNode,
+      ts.factory.createLiteralTypeNode(
+        ts.factory.createStringLiteral(autoIncrementField.name.value),
+      ),
+    ]);
+  }
+
+  return typeReferencNode;
+}
+
+export function createAddArgsTypeDeclaration(
+  def: TableDefinition,
+): ts.TypeAliasDeclaration {
+  return ts.factory.createTypeAliasDeclaration(
+    undefined,
+    [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
+    ts.factory.createIdentifier(createAddArgsTypeName(def)),
+    [],
+    createAddArgsTypeNode(def),
+  );
 }
 
 export function createAddMethod(def: TableDefinition): ts.PropertyAssignment {
@@ -30,7 +65,7 @@ export function createAddMethod(def: TableDefinition): ts.PropertyAssignment {
           undefined,
           ts.factory.createIdentifier('arg'),
           undefined,
-          createAddArgTypeNode(def),
+          createAddArgsTypeNode(def),
         ),
       ],
       addMethodReturnType(def),
@@ -66,29 +101,11 @@ export function createAddMethodTypeNode(def: TableDefinition): ts.TypeNode {
         undefined,
         'arg',
         undefined,
-        createAddArgTypeNode(def),
+        createAddArgsTypeNode(def),
       ),
     ],
     addMethodReturnType(def),
   );
-}
-
-function createAddArgTypeNode(def: TableDefinition): ts.TypeNode {
-  const autoIncrementField = getAutoIncrementFieldForTable(def);
-  const typeReferencNode = ts.factory.createTypeReferenceNode(
-    getItemNameForTable(def),
-  );
-
-  if (autoIncrementField != null) {
-    return ts.factory.createTypeReferenceNode('Omit', [
-      typeReferencNode,
-      ts.factory.createLiteralTypeNode(
-        ts.factory.createStringLiteral(autoIncrementField.name.value),
-      ),
-    ]);
-  }
-
-  return typeReferencNode;
 }
 
 function createAddRequestHandling(
