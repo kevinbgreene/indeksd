@@ -14,6 +14,7 @@ import {
   RangeTypeNode,
   ObjectLiteralTypeNode,
   PropertySignature,
+  TupleTypeNode,
 } from './types';
 
 import * as factory from '../factory';
@@ -368,15 +369,19 @@ export function createParser(tokens: Array<Token>): Parser {
     return typeNodes;
   }
 
-  // TypeNode → Identifier | BaseType | ContainerType
+  // TypeNode → TypeReferenceNode | KeywordTypeNode | ObjectLiteralTypeNode
   function parseTypeNode(): TypeNode {
     const typeToken: Token = currentToken();
+    console.log({ typeToken });
     switch (typeToken.kind) {
       case 'Identifier':
         return parseTypeReferenceNode();
 
       case 'LeftBraceToken':
         return parseObjectLiteralTypeNode();
+
+      case 'LeftBracketToken':
+        return parseTupleTypeNode();
 
       case 'BooleanKeyword':
       case 'StringKeyword':
@@ -407,6 +412,34 @@ export function createParser(tokens: Array<Token>): Parser {
       default:
         throw reportError(`TypeNode expected but found: ${typeToken.kind}`);
     }
+  }
+
+  function parseTupleTypeNode(): TupleTypeNode {
+    const _openBracket = consume('LeftBracketToken');
+    const openBracket = requireValue(
+      _openBracket,
+      'Expected opening bracket for tuple literal type',
+    );
+
+    const members: Array<TypeNode> = [];
+    while (!check('RightBracketToken')) {
+      const member: TypeNode = parseTypeNode();
+      members.push(member);
+      consume('CommaToken');
+    }
+
+    const _closeBracket = consume('RightBracketToken');
+    const closeBracket = requireValue(
+      _closeBracket,
+      'Expected closing bracket for tuple literal type',
+    );
+
+    const location = factory.createTextLocation(
+      openBracket.loc.start,
+      closeBracket.loc.end,
+    );
+
+    return factory.createTupleTypeNode(members, location);
   }
 
   function parseObjectLiteralTypeNode(): ObjectLiteralTypeNode {

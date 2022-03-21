@@ -7,6 +7,7 @@ type Value6 = {
   firstName: string;
   lastName: string;
 };
+type Value7 = [string, Value6];
 
 database MyDatabase {
 

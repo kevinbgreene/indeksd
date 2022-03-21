@@ -27,6 +27,13 @@ export function typeForTypeNode(typeNode: TypeNode): ts.TypeNode {
         }),
       );
 
+    case 'TupleTypeNode':
+      return ts.factory.createTupleTypeNode(
+        typeNode.members.map((next) => {
+          return typeForTypeNode(next);
+        }),
+      );
+
     case 'RangeTypeNode':
       return createRangeType(typeNode);
 

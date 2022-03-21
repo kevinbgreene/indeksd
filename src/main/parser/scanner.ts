@@ -120,6 +120,14 @@ export function createScanner(src: string) {
         addToken('RightParenToken', next);
         break;
 
+      case '[':
+        addToken('LeftBracketToken', next);
+        break;
+
+      case ']':
+        addToken('RightBracketToken', next);
+        break;
+
       case ';':
         addToken('SemicolonToken', next);
         break;

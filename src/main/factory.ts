@@ -22,6 +22,7 @@ import {
   RangeTypeNode,
   PropertySignature,
   ObjectLiteralTypeNode,
+  TupleTypeNode,
 } from './parser/types';
 
 export function createToken(
@@ -161,6 +162,17 @@ export function createPropertySignature(
     kind: 'PropertySignature',
     name,
     type,
+    loc,
+  };
+}
+
+export function createTupleTypeNode(
+  members: ReadonlyArray<TypeNode>,
+  loc: TextLocation,
+): TupleTypeNode {
+  return {
+    kind: 'TupleTypeNode',
+    members,
     loc,
   };
 }

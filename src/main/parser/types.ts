@@ -45,6 +45,11 @@ export interface PropertySignature extends SyntaxNode {
   type: TypeNode;
 }
 
+export interface TupleTypeNode extends SyntaxNode {
+  kind: 'TupleTypeNode';
+  members: ReadonlyArray<TypeNode>;
+}
+
 export interface ObjectLiteralTypeNode extends SyntaxNode {
   kind: 'ObjectLiteralTypeNode';
   members: ReadonlyArray<PropertySignature>;
@@ -65,7 +70,8 @@ export type TypeNode =
   | KeywordTypeNode
   | TypeReferenceNode
   | RangeTypeNode
-  | ObjectLiteralTypeNode;
+  | ObjectLiteralTypeNode
+  | TupleTypeNode;
 
 export interface StringLiteral extends SyntaxNode {
   kind: 'StringLiteral';
@@ -181,6 +187,8 @@ export type CharacterToken =
   | 'LeftBraceToken'
   | 'RightParenToken'
   | 'LeftParenToken'
+  | 'LeftBracketToken'
+  | 'RightBracketToken'
   | 'GreaterThanToken'
   | 'LessThanToken'
   | 'AtToken'
