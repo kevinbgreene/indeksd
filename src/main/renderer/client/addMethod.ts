@@ -120,7 +120,7 @@ function createAddRequestHandling(
   return [
     createConstStatement(
       COMMON_IDENTIFIERS.addRequest,
-      ts.factory.createTypeReferenceNode('IDBRequest'),
+      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.IDBRequest),
       ts.factory.createCallExpression(
         ts.factory.createPropertyAccessExpression(
           ts.factory.createIdentifier('store'),

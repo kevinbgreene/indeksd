@@ -278,7 +278,10 @@ function createIndexAccessHandling(
     createLetStatement(
       COMMON_IDENTIFIERS.getRequest,
       ts.factory.createUnionTypeNode([
-        ts.factory.createTypeReferenceNode('IDBRequest', undefined),
+        ts.factory.createTypeReferenceNode(
+          COMMON_IDENTIFIERS.IDBRequest,
+          undefined,
+        ),
         ts.factory.createLiteralTypeNode(ts.factory.createNull()),
       ]),
       ts.factory.createNull(),

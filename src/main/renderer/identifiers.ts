@@ -14,6 +14,7 @@ export const COMMON_IDENTIFIERS = {
   resolve: ts.factory.createIdentifier('resolve'),
   reject: ts.factory.createIdentifier('reject'),
   Array: ts.factory.createIdentifier('Array'),
+  IDBRequest: ts.factory.createIdentifier('IDBRequest'),
   DBOpenRequest: ts.factory.createIdentifier('DBOpenRequest'),
   Map: ts.factory.createIdentifier('Map'),
   Promise: ts.factory.createIdentifier('Promise'),

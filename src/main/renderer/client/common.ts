@@ -39,7 +39,7 @@ export function createOnErrorHandler(
                     ts.factory.createAsExpression(
                       ts.factory.createIdentifier(methodName),
                       ts.factory.createTypeReferenceNode(
-                        ts.factory.createIdentifier('IDBRequest'),
+                        COMMON_IDENTIFIERS.IDBRequest,
                         requestTypeArgs,
                       ),
                     ),
@@ -83,7 +83,7 @@ export function createOnSuccessHandler(
                     ts.factory.createAsExpression(
                       ts.factory.createIdentifier(methodName),
                       ts.factory.createTypeReferenceNode(
-                        ts.factory.createIdentifier('IDBRequest'),
+                        COMMON_IDENTIFIERS.IDBRequest,
                         requestTypeArgs,
                       ),
                     ),
