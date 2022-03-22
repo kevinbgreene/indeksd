@@ -74,6 +74,10 @@ export function getAutoIncrementFieldForTable(
   return keys.length ? keys[0] : null;
 }
 
+export function isPrimaryKey(tableIndex: TableIndex): boolean {
+  return ['autoincrement', 'key'].includes(tableIndex.indexKind);
+}
+
 export function isAutoIncrementField(def: FieldDefinition): boolean {
   return doAnnotationsInclude(def.annotations, ['autoincrement']);
 }

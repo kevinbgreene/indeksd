@@ -56,22 +56,40 @@ const isPostsPostIdIndex = (arg: PostsGetArgs): arg is {
 };
 export type MyDatabaseClient = {
     authors: {
-        add: (arg: Omit<Authors, "id">) => Promise<number>;
-        get: (arg: AuthorsGetArgs) => Promise<Authors>;
-        getAll: (arg: AuthorsGetArgs) => Promise<ReadonlyArray<Authors>>;
+        add: (arg: Omit<Authors, "id">, options?: {
+            transaction?: IDBTransaction;
+        }) => Promise<number>;
+        get: (arg: AuthorsGetArgs, options?: {
+            transaction?: IDBTransaction;
+        }) => Promise<Authors>;
+        getAll: (arg: AuthorsGetArgs, options?: {
+            transaction?: IDBTransaction;
+        }) => Promise<ReadonlyArray<Authors>>;
     };
     posts: {
-        add: (arg: Post) => Promise<string>;
-        get: (arg: PostsGetArgs) => Promise<Post>;
-        getAll: (arg: PostsGetArgs) => Promise<ReadonlyArray<Post>>;
+        add: (arg: Post, options?: {
+            transaction?: IDBTransaction;
+        }) => Promise<string>;
+        get: (arg: PostsGetArgs, options?: {
+            transaction?: IDBTransaction;
+        }) => Promise<Post>;
+        getAll: (arg: PostsGetArgs, options?: {
+            transaction?: IDBTransaction;
+        }) => Promise<ReadonlyArray<Post>>;
     };
 };
 function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
-    function authorsGet(arg: AuthorsGetArgs, methodName: "get"): Promise<Authors>;
-    function authorsGet(arg: AuthorsGetArgs, methodName: "getAll"): Promise<ReadonlyArray<Authors>>;
-    function authorsGet(arg: AuthorsGetArgs, methodName: "get" | "getAll"): Promise<Authors | ReadonlyArray<Authors>> {
+    function authorsGet(arg: AuthorsGetArgs, methodName: "get", options?: {
+        transaction?: IDBTransaction;
+    }): Promise<Authors>;
+    function authorsGet(arg: AuthorsGetArgs, methodName: "getAll", options?: {
+        transaction?: IDBTransaction;
+    }): Promise<ReadonlyArray<Authors>>;
+    function authorsGet(arg: AuthorsGetArgs, methodName: "get" | "getAll", options?: {
+        transaction?: IDBTransaction;
+    }): Promise<Authors | ReadonlyArray<Authors>> {
         return new Promise((resolve, reject) => {
-            const tx = db.transaction(["Authors"], "readonly");
+            const tx = options?.transaction ?? db.transaction(["Authors"], "readonly");
             const store = tx.objectStore("Authors");
             let getRequest: IDBRequest | null = null;
             if (isAuthorsIdIndex(arg)) {
@@ -101,11 +119,17 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             }
         });
     }
-    function postsGet(arg: PostsGetArgs, methodName: "get"): Promise<Post>;
-    function postsGet(arg: PostsGetArgs, methodName: "getAll"): Promise<ReadonlyArray<Post>>;
-    function postsGet(arg: PostsGetArgs, methodName: "get" | "getAll"): Promise<Post | ReadonlyArray<Post>> {
+    function postsGet(arg: PostsGetArgs, methodName: "get", options?: {
+        transaction?: IDBTransaction;
+    }): Promise<Post>;
+    function postsGet(arg: PostsGetArgs, methodName: "getAll", options?: {
+        transaction?: IDBTransaction;
+    }): Promise<ReadonlyArray<Post>>;
+    function postsGet(arg: PostsGetArgs, methodName: "get" | "getAll", options?: {
+        transaction?: IDBTransaction;
+    }): Promise<Post | ReadonlyArray<Post>> {
         return new Promise((resolve, reject) => {
-            const tx = db.transaction(["Posts"], "readonly");
+            const tx = options?.transaction ?? db.transaction(["Posts"], "readonly");
             const store = tx.objectStore("Posts");
             let getRequest: IDBRequest | null = null;
             if (isPostsPostIdIndex(arg)) {
@@ -129,9 +153,11 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
     }
     return {
         authors: {
-            add: (arg: AuthorsAddArgs): Promise<number> => {
+            add: (arg: AuthorsAddArgs, options?: {
+                transaction?: IDBTransaction;
+            }): Promise<number> => {
                 return new Promise((resolve, reject) => {
-                    const tx = db.transaction(["Authors"], "readwrite");
+                    const tx = options?.transaction ?? db.transaction(["Authors"], "readwrite");
                     const store = tx.objectStore("Authors");
                     const addRequest: IDBRequest = store.add(arg);
                     addRequest.onerror = event => {
@@ -142,17 +168,23 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                     };
                 });
             },
-            get: (arg: AuthorsGetArgs): Promise<Authors> => {
-                return authorsGet(arg, "get");
+            get: (arg: AuthorsGetArgs, options?: {
+                transaction?: IDBTransaction;
+            }): Promise<Authors> => {
+                return authorsGet(arg, "get", options);
             },
-            getAll: (arg: AuthorsGetArgs): Promise<ReadonlyArray<Authors>> => {
-                return authorsGet(arg, "getAll");
+            getAll: (arg: AuthorsGetArgs, options?: {
+                transaction?: IDBTransaction;
+            }): Promise<ReadonlyArray<Authors>> => {
+                return authorsGet(arg, "getAll", options);
             }
         },
         posts: {
-            add: (arg: PostsAddArgs): Promise<string> => {
+            add: (arg: PostsAddArgs, options?: {
+                transaction?: IDBTransaction;
+            }): Promise<string> => {
                 return new Promise((resolve, reject) => {
-                    const tx = db.transaction(["Posts"], "readwrite");
+                    const tx = options?.transaction ?? db.transaction(["Posts"], "readwrite");
                     const store = tx.objectStore("Posts");
                     const addRequest: IDBRequest = store.add(arg);
                     addRequest.onerror = event => {
@@ -163,11 +195,15 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                     };
                 });
             },
-            get: (arg: PostsGetArgs): Promise<Post> => {
-                return postsGet(arg, "get");
+            get: (arg: PostsGetArgs, options?: {
+                transaction?: IDBTransaction;
+            }): Promise<Post> => {
+                return postsGet(arg, "get", options);
             },
-            getAll: (arg: PostsGetArgs): Promise<ReadonlyArray<Post>> => {
-                return postsGet(arg, "getAll");
+            getAll: (arg: PostsGetArgs, options?: {
+                transaction?: IDBTransaction;
+            }): Promise<ReadonlyArray<Post>> => {
+                return postsGet(arg, "getAll", options);
             }
         }
     };

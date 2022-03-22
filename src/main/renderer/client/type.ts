@@ -1,5 +1,6 @@
 import * as ts from 'typescript';
 import { DatabaseDefinition, TableDefinition } from '../../parser';
+import { COMMON_IDENTIFIERS } from '../identifiers';
 import { getAnnotationsByName } from '../keys';
 import { capitalize } from '../utils';
 import { createAddMethodTypeNode } from './addMethod';
@@ -8,6 +9,28 @@ import {
   createGetAllMethodTypeNode,
   createGetMethodTypeNode,
 } from './getMethod';
+
+export function createOptionsTypeNode(): ts.TypeNode {
+  return ts.factory.createTypeLiteralNode([
+    ts.factory.createPropertySignature(
+      undefined,
+      COMMON_IDENTIFIERS.transaction,
+      ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.IDBTransaction),
+    ),
+  ]);
+}
+
+export function createOptionsParameterDeclaration(): ts.ParameterDeclaration {
+  return ts.factory.createParameterDeclaration(
+    undefined,
+    undefined,
+    undefined,
+    ts.factory.createIdentifier('options'),
+    ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+    createOptionsTypeNode(),
+  );
+}
 
 export function createClientTypeDeclaration(
   def: DatabaseDefinition,

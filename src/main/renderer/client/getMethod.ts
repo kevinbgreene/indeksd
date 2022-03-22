@@ -6,13 +6,13 @@ import {
   createLetStatement,
   createNewPromiseWithBody,
 } from '../helpers';
-import { getIndexesForTable, TableIndex } from '../keys';
+import { getIndexesForTable, isPrimaryKey, TableIndex } from '../keys';
 import { typeForTypeNode } from '../types';
 import { capitalize } from '../utils';
 import { createOnErrorHandler, createOnSuccessHandler } from './common';
 import { createGetObjectStore } from './objectStore';
 import { createTransactionWithMode } from './transaction';
-import { getItemNameForTable } from './type';
+import { createOptionsParameterDeclaration, getItemNameForTable } from './type';
 
 export function createGetArgsTypeName(def: TableDefinition): string {
   return `${capitalize(def.name.value)}GetArgs`;
@@ -38,6 +38,7 @@ export function createGetAllMethodTypeNode(def: TableDefinition): ts.TypeNode {
         undefined,
         createGetArgsTypeNode(def),
       ),
+      createOptionsParameterDeclaration(),
     ],
     ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
       ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.ReadonlyArray, [
@@ -59,6 +60,7 @@ export function createGetMethodTypeNode(def: TableDefinition): ts.TypeNode {
         undefined,
         createGetArgsTypeNode(def),
       ),
+      createOptionsParameterDeclaration(),
     ],
     ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
       createItemTypeNodeForTable(def),
@@ -83,6 +85,7 @@ export function createGetAllMethod(
           undefined,
           ts.factory.createTypeReferenceNode(createGetArgsTypeName(def)),
         ),
+        createOptionsParameterDeclaration(),
       ],
       ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
         ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.ReadonlyArray, [
@@ -96,6 +99,7 @@ export function createGetAllMethod(
             ts.factory.createCallExpression(getFunctionName(def), undefined, [
               COMMON_IDENTIFIERS.arg,
               ts.factory.createStringLiteral('getAll'),
+              COMMON_IDENTIFIERS.options,
             ]),
           ),
         ],
@@ -120,6 +124,7 @@ export function createGetMethod(def: TableDefinition): ts.PropertyAssignment {
           undefined,
           ts.factory.createTypeReferenceNode(createGetArgsTypeName(def)),
         ),
+        createOptionsParameterDeclaration(),
       ],
       ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
         createItemTypeNodeForTable(def),
@@ -131,6 +136,7 @@ export function createGetMethod(def: TableDefinition): ts.PropertyAssignment {
             ts.factory.createCallExpression(getFunctionName(def), undefined, [
               COMMON_IDENTIFIERS.arg,
               ts.factory.createStringLiteral('get'),
+              COMMON_IDENTIFIERS.options,
             ]),
           ),
         ],
@@ -333,10 +339,6 @@ function createPredicateNameForIndex(
   return `is${capitalize(def.name.value)}${capitalize(field.name)}Index`;
 }
 
-function isPrimaryKey(tableIndex: TableIndex): boolean {
-  return ['autoincrement', 'key'].includes(tableIndex.indexKind);
-}
-
 export function createIndexPredicates(
   def: TableDefinition,
 ): ReadonlyArray<ts.Statement> {
@@ -489,6 +491,7 @@ export function createGetStoreForIndex(
             ts.factory.createStringLiteral('get'),
           ),
         ),
+        createOptionsParameterDeclaration(),
       ],
       ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
         createItemTypeNodeForTable(def),
@@ -520,6 +523,7 @@ export function createGetStoreForIndex(
             ts.factory.createStringLiteral('getAll'),
           ),
         ),
+        createOptionsParameterDeclaration(),
       ],
       ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
         ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.ReadonlyArray, [
@@ -558,6 +562,7 @@ export function createGetStoreForIndex(
             ),
           ]),
         ),
+        createOptionsParameterDeclaration(),
       ],
       ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
         ts.factory.createUnionTypeNode([

@@ -10,7 +10,7 @@ import { capitalize, lowercase } from '../utils';
 import { createOnErrorHandler, createOnSuccessHandler } from './common';
 import { createGetObjectStore } from './objectStore';
 import { createTransactionWithMode } from './transaction';
-import { getItemNameForTable } from './type';
+import { createOptionsParameterDeclaration, getItemNameForTable } from './type';
 
 function addMethodReturnType(def: TableDefinition): ts.TypeNode {
   return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
@@ -73,6 +73,7 @@ export function createAddMethod(def: TableDefinition): ts.PropertyAssignment {
           undefined,
           createAddArgsTypeReference(def),
         ),
+        createOptionsParameterDeclaration(),
       ],
       addMethodReturnType(def),
       undefined,
@@ -109,6 +110,7 @@ export function createAddMethodTypeNode(def: TableDefinition): ts.TypeNode {
         undefined,
         createAddArgsTypeNode(def),
       ),
+      createOptionsParameterDeclaration(),
     ],
     addMethodReturnType(def),
   );
