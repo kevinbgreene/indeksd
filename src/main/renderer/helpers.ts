@@ -1,5 +1,5 @@
 import * as ts from 'typescript';
-import { COMMON_IDENTIFIERS } from '../identifiers';
+import { COMMON_IDENTIFIERS } from './identifiers';
 
 export function createNewPromiseWithBody(body: ts.Block): ts.NewExpression {
   return ts.factory.createNewExpression(COMMON_IDENTIFIERS.Promise, undefined, [

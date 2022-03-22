@@ -1,5 +1,5 @@
 import * as ts from 'typescript';
-import { COMMON_IDENTIFIERS } from '../identifiers';
+import { COMMON_IDENTIFIERS } from './identifiers';
 import {
   DatabaseDefinition,
   FieldDefinition,
@@ -137,7 +137,7 @@ function createCallToCreateClient(): ts.ExpressionStatement {
       ts.factory.createCallExpression(
         ts.factory.createIdentifier('createDatabaseClient'),
         undefined,
-        [ts.factory.createIdentifier('db')],
+        [COMMON_IDENTIFIERS.db],
       ),
     ]),
   );
@@ -154,7 +154,7 @@ function createObjectStores(
     const indexesForTable = getIndexFieldsForTable(next);
     const objectStore = ts.factory.createCallExpression(
       ts.factory.createPropertyAccessExpression(
-        ts.factory.createIdentifier('db'),
+        COMMON_IDENTIFIERS.db,
         ts.factory.createIdentifier('createObjectStore'),
       ),
       undefined,
@@ -240,7 +240,7 @@ function optionsForIndex(def: FieldDefinition): ts.ObjectLiteralExpression {
 
 function createDbAssignment(): ts.Statement {
   return createConstStatement(
-    ts.factory.createIdentifier('db'),
+    COMMON_IDENTIFIERS.db,
     undefined,
     ts.factory.createPropertyAccessExpression(
       COMMON_IDENTIFIERS.DBOpenRequest,

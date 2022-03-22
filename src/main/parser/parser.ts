@@ -369,10 +369,8 @@ export function createParser(tokens: Array<Token>): Parser {
     return typeNodes;
   }
 
-  // TypeNode → TypeReferenceNode | KeywordTypeNode | ObjectLiteralTypeNode
   function parseTypeNode(): TypeNode {
     const typeToken: Token = currentToken();
-    console.log({ typeToken });
     switch (typeToken.kind) {
       case 'Identifier':
         return parseTypeReferenceNode();
@@ -392,6 +390,7 @@ export function createParser(tokens: Array<Token>): Parser {
       case 'StringLiteral':
         advance();
         return factory.createStringLiteral(typeToken.text, typeToken.loc);
+
       case 'IntegerLiteral':
         if (peek().kind === 'DotDotToken') {
           return parseRangeTypeNode();
@@ -399,12 +398,15 @@ export function createParser(tokens: Array<Token>): Parser {
           advance();
           return factory.createIntegerLiteral(typeToken.text, typeToken.loc);
         }
+
       case 'FloatLiteral':
         advance();
         return factory.createFloatLiteral(typeToken.text, typeToken.loc);
+
       case 'TrueKeyword':
         advance();
         return factory.createBooleanLiteral(true, typeToken.loc);
+
       case 'FalseKeyword':
         advance();
         return factory.createBooleanLiteral(false, typeToken.loc);

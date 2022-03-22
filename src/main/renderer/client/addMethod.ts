@@ -1,12 +1,12 @@
 import * as ts from 'typescript';
-import { COMMON_IDENTIFIERS } from '../../identifiers';
+import { COMMON_IDENTIFIERS } from '../identifiers';
 import { TableDefinition } from '../../parser';
 import { createConstStatement, createNewPromiseWithBody } from '../helpers';
 import {
   getAutoIncrementFieldForTable,
   getPrimaryKeyTypeForTable,
 } from '../keys';
-import { capitalize } from '../utils';
+import { capitalize, lowercase } from '../utils';
 import { createOnErrorHandler, createOnSuccessHandler } from './common';
 import { createGetObjectStore } from './objectStore';
 import { createTransactionWithMode } from './transaction';
@@ -20,6 +20,12 @@ function addMethodReturnType(def: TableDefinition): ts.TypeNode {
 
 export function createAddArgsTypeName(def: TableDefinition): string {
   return `${capitalize(def.name.value)}AddArgs`;
+}
+
+export function createAddArgsTypeReference(
+  def: TableDefinition,
+): ts.TypeReferenceNode {
+  return ts.factory.createTypeReferenceNode(createAddArgsTypeName(def));
 }
 
 export function createAddArgsTypeNode(def: TableDefinition): ts.TypeNode {
@@ -63,9 +69,9 @@ export function createAddMethod(def: TableDefinition): ts.PropertyAssignment {
           undefined,
           undefined,
           undefined,
-          ts.factory.createIdentifier('arg'),
+          COMMON_IDENTIFIERS.arg,
           undefined,
-          createAddArgsTypeNode(def),
+          createAddArgsTypeReference(def),
         ),
       ],
       addMethodReturnType(def),
@@ -121,10 +127,10 @@ function createAddRequestHandling(
           ts.factory.createIdentifier('add'),
         ),
         undefined,
-        [ts.factory.createIdentifier('arg')],
+        [COMMON_IDENTIFIERS.arg],
       ),
     ),
-    createOnErrorHandler('addRequest', getPrimaryKeyTypeForTable(def)),
-    createOnSuccessHandler('addRequest', getPrimaryKeyTypeForTable(def)),
+    createOnErrorHandler('addRequest', [getPrimaryKeyTypeForTable(def)]),
+    createOnSuccessHandler('addRequest', [getPrimaryKeyTypeForTable(def)]),
   ];
 }

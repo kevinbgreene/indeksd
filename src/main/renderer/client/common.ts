@@ -1,5 +1,5 @@
 import * as ts from 'typescript';
-import { COMMON_IDENTIFIERS } from '../../identifiers';
+import { COMMON_IDENTIFIERS } from '../identifiers';
 import { DatabaseDefinition } from '../../parser';
 import { createParameterDeclaration } from '../helpers';
 import { capitalize } from '../utils';
@@ -14,7 +14,7 @@ export function createClientTypeNode(def: DatabaseDefinition): ts.TypeNode {
 
 export function createOnErrorHandler(
   methodName: string,
-  requestType: ts.TypeNode,
+  requestTypeArgs: ReadonlyArray<ts.TypeNode>,
 ): ts.Statement {
   return ts.factory.createExpressionStatement(
     ts.factory.createAssignment(
@@ -40,7 +40,7 @@ export function createOnErrorHandler(
                       ts.factory.createIdentifier(methodName),
                       ts.factory.createTypeReferenceNode(
                         ts.factory.createIdentifier('IDBRequest'),
-                        [requestType],
+                        requestTypeArgs,
                       ),
                     ),
                     'error',
@@ -58,7 +58,7 @@ export function createOnErrorHandler(
 
 export function createOnSuccessHandler(
   methodName: string,
-  requestType: ts.TypeNode,
+  requestTypeArgs: ReadonlyArray<ts.TypeNode> = [],
 ): ts.Statement {
   return ts.factory.createExpressionStatement(
     ts.factory.createAssignment(
@@ -84,7 +84,7 @@ export function createOnSuccessHandler(
                       ts.factory.createIdentifier(methodName),
                       ts.factory.createTypeReferenceNode(
                         ts.factory.createIdentifier('IDBRequest'),
-                        [requestType],
+                        requestTypeArgs,
                       ),
                     ),
                     'result',

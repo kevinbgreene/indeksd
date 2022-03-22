@@ -1,5 +1,6 @@
 import * as ts from 'typescript';
 import { createConstStatement } from '../helpers';
+import { COMMON_IDENTIFIERS } from '../identifiers';
 
 export type TransactionMode = 'readonly' | 'readwrite' | 'versionchange';
 
@@ -12,7 +13,7 @@ export function createTransactionWithMode(
     undefined,
     ts.factory.createCallExpression(
       ts.factory.createPropertyAccessExpression(
-        ts.factory.createIdentifier('db'),
+        COMMON_IDENTIFIERS.db,
         ts.factory.createIdentifier('transaction'),
       ),
       undefined,

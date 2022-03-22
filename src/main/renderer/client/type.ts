@@ -4,7 +4,10 @@ import { getAnnotationsByName } from '../keys';
 import { capitalize } from '../utils';
 import { createAddMethodTypeNode } from './addMethod';
 import { createDatabaseClientName } from './common';
-import { createGetMethodTypeNode } from './getMethod';
+import {
+  createGetAllMethodTypeNode,
+  createGetMethodTypeNode,
+} from './getMethod';
 
 export function createClientTypeDeclaration(
   def: DatabaseDefinition,
@@ -32,6 +35,12 @@ export function createClientTypeDeclaration(
               ts.factory.createIdentifier('get'),
               undefined,
               createGetMethodTypeNode(next),
+            ),
+            ts.factory.createPropertySignature(
+              undefined,
+              ts.factory.createIdentifier('getAll'),
+              undefined,
+              createGetAllMethodTypeNode(next),
             ),
           ]),
         );

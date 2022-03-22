@@ -1,5 +1,5 @@
 import * as ts from 'typescript';
-import { COMMON_IDENTIFIERS } from '../../identifiers';
+import { COMMON_IDENTIFIERS } from '../identifiers';
 import { TableDefinition } from '../../parser';
 import {
   createConstStatement,
@@ -26,6 +26,27 @@ function createItemTypeNodeForTable(def: TableDefinition): ts.TypeNode {
   return ts.factory.createTypeReferenceNode(getItemNameForTable(def));
 }
 
+export function createGetAllMethodTypeNode(def: TableDefinition): ts.TypeNode {
+  return ts.factory.createFunctionTypeNode(
+    undefined,
+    [
+      ts.factory.createParameterDeclaration(
+        undefined,
+        undefined,
+        undefined,
+        'arg',
+        undefined,
+        createGetArgsTypeNode(def),
+      ),
+    ],
+    ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
+      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.ReadonlyArray, [
+        createItemTypeNodeForTable(def),
+      ]),
+    ]),
+  );
+}
+
 export function createGetMethodTypeNode(def: TableDefinition): ts.TypeNode {
   return ts.factory.createFunctionTypeNode(
     undefined,
@@ -45,6 +66,45 @@ export function createGetMethodTypeNode(def: TableDefinition): ts.TypeNode {
   );
 }
 
+export function createGetAllMethod(
+  def: TableDefinition,
+): ts.PropertyAssignment {
+  return ts.factory.createPropertyAssignment(
+    'getAll',
+    ts.factory.createArrowFunction(
+      undefined,
+      undefined,
+      [
+        ts.factory.createParameterDeclaration(
+          undefined,
+          undefined,
+          undefined,
+          COMMON_IDENTIFIERS.arg,
+          undefined,
+          ts.factory.createTypeReferenceNode(createGetArgsTypeName(def)),
+        ),
+      ],
+      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
+        ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.ReadonlyArray, [
+          createItemTypeNodeForTable(def),
+        ]),
+      ]),
+      undefined,
+      ts.factory.createBlock(
+        [
+          ts.factory.createReturnStatement(
+            ts.factory.createCallExpression(getFunctionName(def), undefined, [
+              COMMON_IDENTIFIERS.arg,
+              ts.factory.createStringLiteral('getAll'),
+            ]),
+          ),
+        ],
+        true,
+      ),
+    ),
+  );
+}
+
 export function createGetMethod(def: TableDefinition): ts.PropertyAssignment {
   return ts.factory.createPropertyAssignment(
     'get',
@@ -56,7 +116,7 @@ export function createGetMethod(def: TableDefinition): ts.PropertyAssignment {
           undefined,
           undefined,
           undefined,
-          ts.factory.createIdentifier('arg'),
+          COMMON_IDENTIFIERS.arg,
           undefined,
           ts.factory.createTypeReferenceNode(createGetArgsTypeName(def)),
         ),
@@ -68,16 +128,10 @@ export function createGetMethod(def: TableDefinition): ts.PropertyAssignment {
       ts.factory.createBlock(
         [
           ts.factory.createReturnStatement(
-            createNewPromiseWithBody(
-              ts.factory.createBlock(
-                [
-                  createTransactionWithMode(def.name.value, 'readonly'),
-                  createGetObjectStore(def.name.value),
-                  ...createIndexAccessHandling(def),
-                ],
-                true,
-              ),
-            ),
+            ts.factory.createCallExpression(getFunctionName(def), undefined, [
+              COMMON_IDENTIFIERS.arg,
+              ts.factory.createStringLiteral('get'),
+            ]),
           ),
         ],
         true,
@@ -96,7 +150,7 @@ function createHandlingForIndexGet(
     ts.factory.createCallExpression(
       ts.factory.createIdentifier(createPredicateNameForIndex(def, tableIndex)),
       undefined,
-      [ts.factory.createIdentifier('arg')],
+      [COMMON_IDENTIFIERS.arg],
     ),
     ts.factory.createBlock(
       [
@@ -116,14 +170,14 @@ function createHandlingForIndexGet(
           ts.factory.createAssignment(
             COMMON_IDENTIFIERS.getRequest,
             ts.factory.createCallExpression(
-              ts.factory.createPropertyAccessExpression(
+              ts.factory.createElementAccessExpression(
                 ts.factory.createIdentifier('index'),
-                'get',
+                COMMON_IDENTIFIERS.methodName,
               ),
               undefined,
               [
                 ts.factory.createPropertyAccessExpression(
-                  ts.factory.createIdentifier('arg'),
+                  COMMON_IDENTIFIERS.arg,
                   tableIndex.name,
                 ),
               ],
@@ -147,7 +201,7 @@ function createHandlingForPrimaryKeyGet(
     ts.factory.createCallExpression(
       ts.factory.createIdentifier(createPredicateNameForIndex(def, tableIndex)),
       undefined,
-      [ts.factory.createIdentifier('arg')],
+      [COMMON_IDENTIFIERS.arg],
     ),
     ts.factory.createBlock(
       [
@@ -155,14 +209,14 @@ function createHandlingForPrimaryKeyGet(
           ts.factory.createAssignment(
             COMMON_IDENTIFIERS.getRequest,
             ts.factory.createCallExpression(
-              ts.factory.createPropertyAccessExpression(
+              ts.factory.createElementAccessExpression(
                 ts.factory.createIdentifier('store'),
-                'get',
+                COMMON_IDENTIFIERS.methodName,
               ),
               undefined,
               [
                 ts.factory.createPropertyAccessExpression(
-                  ts.factory.createIdentifier('arg'),
+                  COMMON_IDENTIFIERS.arg,
                   tableIndex.name,
                 ),
               ],
@@ -196,12 +250,12 @@ function createConditionsForIndexes(
             ts.factory.createAssignment(
               COMMON_IDENTIFIERS.getRequest,
               ts.factory.createCallExpression(
-                ts.factory.createPropertyAccessExpression(
+                ts.factory.createElementAccessExpression(
                   ts.factory.createIdentifier('store'),
-                  'get',
+                  COMMON_IDENTIFIERS.methodName,
                 ),
                 undefined,
-                [ts.factory.createIdentifier('arg')],
+                [COMMON_IDENTIFIERS.arg],
               ),
             ),
           ),
@@ -224,9 +278,7 @@ function createIndexAccessHandling(
     createLetStatement(
       COMMON_IDENTIFIERS.getRequest,
       ts.factory.createUnionTypeNode([
-        ts.factory.createTypeReferenceNode('IDBRequest', [
-          createItemTypeNodeForTable(def),
-        ]),
+        ts.factory.createTypeReferenceNode('IDBRequest', undefined),
         ts.factory.createLiteralTypeNode(ts.factory.createNull()),
       ]),
       ts.factory.createNull(),
@@ -240,8 +292,8 @@ function createIndexAccessHandling(
       ),
       ts.factory.createBlock(
         [
-          createOnErrorHandler('getRequest', createItemTypeNodeForTable(def)),
-          createOnSuccessHandler('getRequest', createItemTypeNodeForTable(def)),
+          createOnErrorHandler('getRequest', []),
+          createOnSuccessHandler('getRequest', []),
         ],
         true,
       ),
@@ -307,7 +359,7 @@ export function createIndexPredicates(
         ],
         ts.factory.createTypePredicateNode(
           undefined,
-          ts.factory.createIdentifier('arg'),
+          COMMON_IDENTIFIERS.arg,
           isPrimaryKey(next)
             ? objectTypeForIndex(next)
             : typeNodeForIndex(next),
@@ -318,9 +370,7 @@ export function createIndexPredicates(
             ts.factory.createReturnStatement(
               ts.factory.createBinaryExpression(
                 ts.factory.createBinaryExpression(
-                  ts.factory.createTypeOfExpression(
-                    ts.factory.createIdentifier('arg'),
-                  ),
+                  ts.factory.createTypeOfExpression(COMMON_IDENTIFIERS.arg),
                   ts.SyntaxKind.EqualsEqualsEqualsToken,
                   ts.factory.createStringLiteral('object'),
                 ),
@@ -332,7 +382,7 @@ export function createIndexPredicates(
                   ),
                   undefined,
                   [
-                    ts.factory.createIdentifier('arg'),
+                    COMMON_IDENTIFIERS.arg,
                     ts.factory.createStringLiteral(next.name),
                   ],
                 ),
@@ -401,4 +451,136 @@ export function createGetArgsTypeDeclaration(
       }),
     ),
   );
+}
+
+function getFunctionName(def: TableDefinition): ts.Identifier {
+  return ts.factory.createIdentifier(`${def.name.value.toLowerCase()}Get`);
+}
+
+export function createGetStoreForIndex(
+  def: TableDefinition,
+): ReadonlyArray<ts.Statement> {
+  return [
+    ts.factory.createFunctionDeclaration(
+      undefined,
+      undefined,
+      undefined,
+      getFunctionName(def),
+      undefined,
+      [
+        ts.factory.createParameterDeclaration(
+          undefined,
+          undefined,
+          undefined,
+          COMMON_IDENTIFIERS.arg,
+          undefined,
+          createGetArgsTypeNode(def),
+        ),
+        ts.factory.createParameterDeclaration(
+          undefined,
+          undefined,
+          undefined,
+          COMMON_IDENTIFIERS.methodName,
+          undefined,
+          ts.factory.createLiteralTypeNode(
+            ts.factory.createStringLiteral('get'),
+          ),
+        ),
+      ],
+      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
+        createItemTypeNodeForTable(def),
+      ]),
+      undefined,
+    ),
+    ts.factory.createFunctionDeclaration(
+      undefined,
+      undefined,
+      undefined,
+      getFunctionName(def),
+      undefined,
+      [
+        ts.factory.createParameterDeclaration(
+          undefined,
+          undefined,
+          undefined,
+          COMMON_IDENTIFIERS.arg,
+          undefined,
+          createGetArgsTypeNode(def),
+        ),
+        ts.factory.createParameterDeclaration(
+          undefined,
+          undefined,
+          undefined,
+          COMMON_IDENTIFIERS.methodName,
+          undefined,
+          ts.factory.createLiteralTypeNode(
+            ts.factory.createStringLiteral('getAll'),
+          ),
+        ),
+      ],
+      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
+        ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.ReadonlyArray, [
+          createItemTypeNodeForTable(def),
+        ]),
+      ]),
+      undefined,
+    ),
+    ts.factory.createFunctionDeclaration(
+      undefined,
+      undefined,
+      undefined,
+      getFunctionName(def),
+      undefined,
+      [
+        ts.factory.createParameterDeclaration(
+          undefined,
+          undefined,
+          undefined,
+          COMMON_IDENTIFIERS.arg,
+          undefined,
+          createGetArgsTypeNode(def),
+        ),
+        ts.factory.createParameterDeclaration(
+          undefined,
+          undefined,
+          undefined,
+          COMMON_IDENTIFIERS.methodName,
+          undefined,
+          ts.factory.createUnionTypeNode([
+            ts.factory.createLiteralTypeNode(
+              ts.factory.createStringLiteral('get'),
+            ),
+            ts.factory.createLiteralTypeNode(
+              ts.factory.createStringLiteral('getAll'),
+            ),
+          ]),
+        ),
+      ],
+      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
+        ts.factory.createUnionTypeNode([
+          createItemTypeNodeForTable(def),
+          ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.ReadonlyArray, [
+            createItemTypeNodeForTable(def),
+          ]),
+        ]),
+      ]),
+      ts.factory.createBlock(
+        [
+          ts.factory.createReturnStatement(
+            createNewPromiseWithBody(
+              ts.factory.createBlock(
+                [
+                  createTransactionWithMode(def.name.value, 'readonly'),
+                  createGetObjectStore(def.name.value),
+                  ...createIndexAccessHandling(def),
+                ],
+                true,
+              ),
+            ),
+          ),
+        ],
+        true,
+      ),
+    ),
+  ];
 }

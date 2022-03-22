@@ -17,7 +17,7 @@ database MyDatabase {
     @index @unique email: string;
   }
 
-  table Posts {
+  table Posts @item("Post") {
     @key postId: string;
     name: string;
     content: string;
