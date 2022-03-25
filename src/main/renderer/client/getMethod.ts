@@ -1107,7 +1107,7 @@ function createIfWithJoins({
         COMMON_IDENTIFIERS.withJoins,
       ),
       ts.SyntaxKind.ExclamationEqualsToken,
-      ts.factory.createNull(),
+      ts.factory.createFalse(),
     ),
     thenBlock,
     ts.factory.createBlock(
