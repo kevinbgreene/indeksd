@@ -4,6 +4,7 @@ import {
   DatabaseDefinition,
   FieldDefinition,
   TableDefinition,
+  TypeNode,
 } from '../parser';
 import {
   createClientFunction,
@@ -15,54 +16,31 @@ import {
   createGetArgsTypeDeclaration,
   createIndexPredicates,
 } from './client/getMethod';
-import { getItemNameForTable } from './client/type';
-import {
-  createConstStatement,
-  createNewPromiseWithBody,
-  createParameterDeclaration,
-} from './helpers';
+import { createConstStatement, createNewPromiseWithBody } from './helpers';
 import {
   annotationsFromList,
   getPrimaryKeyFieldForTable,
   getIndexFieldsForTable,
   isAutoIncrementField,
 } from './keys';
-import { createBooleanLiteral, typeForTypeNode } from './types';
-
-function createItemTypeForTable(def: TableDefinition): ts.TypeAliasDeclaration {
-  return ts.factory.createTypeAliasDeclaration(
-    undefined,
-    [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
-    getItemNameForTable(def),
-    undefined,
-    ts.factory.createTypeLiteralNode(
-      def.body.map((next) => {
-        return ts.factory.createPropertySignature(
-          undefined,
-          ts.factory.createIdentifier(next.name.value),
-          undefined,
-          typeForTypeNode(next.type),
-        );
-      }),
-    ),
-  );
-}
+import { createBooleanLiteral } from './types';
+import { createItemTypeWithJoinsForTable } from './joins';
 
 export function renderDatabaseDefinition(
   def: DatabaseDefinition,
 ): ReadonlyArray<ts.Statement> {
   return [
-    ...def.body.map((next) => {
-      return createItemTypeForTable(next);
+    ...def.body.flatMap((next) => {
+      return createItemTypeWithJoinsForTable(next, def);
     }),
     ...def.body.map((next) => {
       return createAddArgsTypeDeclaration(next);
     }),
     ...def.body.map((next) => {
-      return createGetArgsTypeDeclaration(next);
+      return createGetArgsTypeDeclaration(next, def);
     }),
     ...def.body.flatMap((next) => {
-      return createIndexPredicates(next);
+      return createIndexPredicates(next, def);
     }),
     createClientTypeDeclaration(def),
     createClientFunction(def),
@@ -262,7 +240,7 @@ function createEventHandler(
       ts.factory.createArrowFunction(
         undefined,
         undefined,
-        [createParameterDeclaration(COMMON_IDENTIFIERS.event)],
+        [], // params
         undefined,
         undefined,
         ts.factory.createBlock(eventStatements, true),

@@ -1,8 +1,15 @@
 import * as ts from 'typescript';
 import { COMMON_IDENTIFIERS } from '../identifiers';
-import { DatabaseDefinition } from '../../parser';
-import { createParameterDeclaration } from '../helpers';
+import { DatabaseDefinition, TableDefinition } from '../../parser';
 import { capitalize } from '../utils';
+
+export function clientClassNameForTable(def: TableDefinition): string {
+  return `${capitalize(def.name.value)}Client`;
+}
+
+export function clientVariableNameForTable(def: TableDefinition): string {
+  return `${def.name.value.toLowerCase()}Client`;
+}
 
 export function createDatabaseClientName(def: DatabaseDefinition): string {
   return `${capitalize(def.name.value)}Client`;
@@ -25,7 +32,7 @@ export function createOnErrorHandler(
       ts.factory.createArrowFunction(
         undefined,
         undefined,
-        [createParameterDeclaration(COMMON_IDENTIFIERS.event)],
+        [], // params
         undefined,
         undefined,
         ts.factory.createBlock(
@@ -69,7 +76,7 @@ export function createOnSuccessHandler(
       ts.factory.createArrowFunction(
         undefined,
         undefined,
-        [createParameterDeclaration(COMMON_IDENTIFIERS.event)],
+        [], // params
         undefined,
         undefined,
         ts.factory.createBlock(

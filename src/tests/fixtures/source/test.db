@@ -21,7 +21,7 @@ database MyDatabase {
     @key postId: string;
     name: string;
     content: string;
-    author: string;
+    @index author: Authors;
   }
 
 }

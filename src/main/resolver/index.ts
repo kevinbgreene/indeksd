@@ -1,0 +1,1 @@
+export { definitionForIdentifier } from './definitionForIdentifier';

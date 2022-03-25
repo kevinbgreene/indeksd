@@ -9,7 +9,6 @@
     "outDir": "./dist",
     "noEmitOnError": true,
     "strict": true,
-    "noUnusedLocals": false,
     "pretty": true
   },
   "exclude": ["node_modules", "dist"]

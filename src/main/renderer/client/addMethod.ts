@@ -1,37 +1,38 @@
 import * as ts from 'typescript';
 import { COMMON_IDENTIFIERS } from '../identifiers';
-import { TableDefinition } from '../../parser';
+import { DatabaseDefinition, TableDefinition } from '../../parser';
 import { createConstStatement, createNewPromiseWithBody } from '../helpers';
 import {
   getAutoIncrementFieldForTable,
   getPrimaryKeyTypeForTable,
 } from '../keys';
-import { capitalize, lowercase } from '../utils';
+import { capitalize } from '../utils';
 import { createOnErrorHandler, createOnSuccessHandler } from './common';
 import { createGetObjectStore } from './objectStore';
 import { createTransactionWithMode } from './transaction';
-import { createOptionsParameterDeclaration, getItemNameForTable } from './type';
+import { createOptionsParameterDeclaration } from './type';
+import { getItemNameForTable } from '../common';
 
-function addMethodReturnType(def: TableDefinition): ts.TypeNode {
+function addMethodReturnType(table: TableDefinition): ts.TypeNode {
   return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
-    getPrimaryKeyTypeForTable(def),
+    getPrimaryKeyTypeForTable(table),
   ]);
 }
 
-export function createAddArgsTypeName(def: TableDefinition): string {
-  return `${capitalize(def.name.value)}AddArgs`;
+export function createAddArgsTypeName(table: TableDefinition): string {
+  return `${capitalize(table.name.value)}AddArgs`;
 }
 
 export function createAddArgsTypeReference(
-  def: TableDefinition,
+  table: TableDefinition,
 ): ts.TypeReferenceNode {
-  return ts.factory.createTypeReferenceNode(createAddArgsTypeName(def));
+  return ts.factory.createTypeReferenceNode(createAddArgsTypeName(table));
 }
 
-export function createAddArgsTypeNode(def: TableDefinition): ts.TypeNode {
-  const autoIncrementField = getAutoIncrementFieldForTable(def);
+export function createAddArgsTypeNode(table: TableDefinition): ts.TypeNode {
+  const autoIncrementField = getAutoIncrementFieldForTable(table);
   const typeReferencNode = ts.factory.createTypeReferenceNode(
-    getItemNameForTable(def),
+    getItemNameForTable(table),
   );
 
   if (autoIncrementField != null) {
@@ -47,77 +48,90 @@ export function createAddArgsTypeNode(def: TableDefinition): ts.TypeNode {
 }
 
 export function createAddArgsTypeDeclaration(
-  def: TableDefinition,
+  table: TableDefinition,
 ): ts.TypeAliasDeclaration {
   return ts.factory.createTypeAliasDeclaration(
     undefined,
     [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
-    ts.factory.createIdentifier(createAddArgsTypeName(def)),
+    ts.factory.createIdentifier(createAddArgsTypeName(table)),
     [],
-    createAddArgsTypeNode(def),
+    createAddArgsTypeNode(table),
   );
 }
 
-export function createAddMethod(def: TableDefinition): ts.PropertyAssignment {
-  return ts.factory.createPropertyAssignment(
+export function createAddMethod(
+  table: TableDefinition,
+  database: DatabaseDefinition,
+): ts.MethodDeclaration {
+  return ts.factory.createMethodDeclaration(
+    undefined,
+    undefined,
+    undefined,
     'add',
-    ts.factory.createArrowFunction(
-      undefined,
-      undefined,
-      [
-        ts.factory.createParameterDeclaration(
-          undefined,
-          undefined,
-          undefined,
-          COMMON_IDENTIFIERS.arg,
-          undefined,
-          createAddArgsTypeReference(def),
-        ),
-        createOptionsParameterDeclaration(),
-      ],
-      addMethodReturnType(def),
-      undefined,
-      ts.factory.createBlock(
-        [
-          ts.factory.createReturnStatement(
-            createNewPromiseWithBody(
-              ts.factory.createBlock(
-                [
-                  createTransactionWithMode(def.name.value, 'readwrite'),
-                  createGetObjectStore(def.name.value),
-                  ...createAddRequestHandling(def),
-                ],
-                true,
-              ),
-            ),
-          ),
-        ],
-        true,
-      ),
-    ),
-  );
-}
-
-export function createAddMethodTypeNode(def: TableDefinition): ts.TypeNode {
-  return ts.factory.createFunctionTypeNode(
+    undefined,
     undefined,
     [
       ts.factory.createParameterDeclaration(
         undefined,
         undefined,
         undefined,
-        'arg',
+        COMMON_IDENTIFIERS.arg,
         undefined,
-        createAddArgsTypeNode(def),
+        createAddArgsTypeReference(table),
       ),
-      createOptionsParameterDeclaration(),
+      createOptionsParameterDeclaration([]),
     ],
-    addMethodReturnType(def),
+    addMethodReturnType(table),
+    ts.factory.createBlock(
+      [
+        ts.factory.createReturnStatement(
+          createNewPromiseWithBody(
+            ts.factory.createBlock(
+              [
+                createTransactionWithMode({
+                  table,
+                  database,
+                  mode: 'readwrite',
+                  withJoins: false,
+                }),
+                createGetObjectStore(table.name.value),
+                ...createAddRequestHandling(table),
+              ],
+              true,
+            ),
+          ),
+        ),
+      ],
+      true,
+    ),
+  );
+}
+
+export function createAddMethodSignature(
+  table: TableDefinition,
+): ts.MethodSignature {
+  return ts.factory.createMethodSignature(
+    undefined,
+    ts.factory.createIdentifier('add'),
+    undefined,
+    undefined,
+    [
+      ts.factory.createParameterDeclaration(
+        undefined,
+        undefined,
+        undefined,
+        COMMON_IDENTIFIERS.arg,
+        undefined,
+        createAddArgsTypeNode(table),
+      ),
+      createOptionsParameterDeclaration([]),
+    ],
+    addMethodReturnType(table),
   );
 }
 
 function createAddRequestHandling(
-  def: TableDefinition,
+  table: TableDefinition,
 ): ReadonlyArray<ts.Statement> {
   return [
     createConstStatement(
@@ -132,7 +146,7 @@ function createAddRequestHandling(
         [COMMON_IDENTIFIERS.arg],
       ),
     ),
-    createOnErrorHandler('addRequest', [getPrimaryKeyTypeForTable(def)]),
-    createOnSuccessHandler('addRequest', [getPrimaryKeyTypeForTable(def)]),
+    createOnErrorHandler('addRequest', [getPrimaryKeyTypeForTable(table)]),
+    createOnSuccessHandler('addRequest', [getPrimaryKeyTypeForTable(table)]),
   ];
 }

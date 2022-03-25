@@ -65,6 +65,11 @@ export interface RangeTypeNode extends SyntaxNode {
   endValue: IntegerLiteral;
 }
 
+export interface UnionTypeNode extends SyntaxNode {
+  kind: 'UnionTypeNode';
+  types: ReadonlyArray<TypeNode>;
+}
+
 export type TypeNode =
   | LiteralType
   | KeywordTypeNode
@@ -173,6 +178,7 @@ export type Literal =
   | 'BooleanLiteral';
 
 export type Type =
+  | 'UnionTypeNode'
   | 'TypeReferenceNode'
   | 'RangeTypeNode'
   | 'ObjectLiteralTypeNode'

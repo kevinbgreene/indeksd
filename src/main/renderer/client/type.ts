@@ -1,27 +1,71 @@
 import * as ts from 'typescript';
-import { DatabaseDefinition, TableDefinition } from '../../parser';
+import { DatabaseDefinition } from '../../parser';
 import { COMMON_IDENTIFIERS } from '../identifiers';
-import { getAnnotationsByName } from '../keys';
-import { capitalize } from '../utils';
-import { createAddMethodTypeNode } from './addMethod';
+import { TableJoin } from '../joins';
+import { createBooleanType } from '../types';
+import { createAddMethodSignature } from './addMethod';
 import { createDatabaseClientName } from './common';
-import {
-  createGetAllMethodTypeNode,
-  createGetMethodTypeNode,
-} from './getMethod';
+import { createGetMethodSignaturesForTable } from './getMethod';
 
-export function createOptionsTypeNode(): ts.TypeNode {
-  return ts.factory.createTypeLiteralNode([
-    ts.factory.createPropertySignature(
-      undefined,
-      COMMON_IDENTIFIERS.transaction,
-      ts.factory.createToken(ts.SyntaxKind.QuestionToken),
-      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.IDBTransaction),
-    ),
-  ]);
+export function createBaseOptionsTypeDeclaration(
+  joins: ReadonlyArray<TableJoin>,
+): ts.TypeAliasDeclaration {
+  return ts.factory.createTypeAliasDeclaration(
+    undefined,
+    undefined,
+    ts.factory.createIdentifier('OperationOptions'),
+    undefined,
+    createOptionsTypeNode(),
+  );
 }
 
-export function createOptionsParameterDeclaration(): ts.ParameterDeclaration {
+export function createTransactionOptionPropertySignature(): ts.PropertySignature {
+  return ts.factory.createPropertySignature(
+    undefined,
+    COMMON_IDENTIFIERS.transaction,
+    ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+    ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.IDBTransaction),
+  );
+}
+
+export function createWithJoinsBooleanPropertySignature(): ts.PropertySignature {
+  return ts.factory.createPropertySignature(
+    undefined,
+    COMMON_IDENTIFIERS.withJoins,
+    ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+    createBooleanType(),
+  );
+}
+
+export function createWithJoinsTruePropertySignature(): ts.PropertySignature {
+  return ts.factory.createPropertySignature(
+    undefined,
+    COMMON_IDENTIFIERS.withJoins,
+    ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+    ts.factory.createLiteralTypeNode(ts.factory.createTrue()),
+  );
+}
+
+export function createWithJoinsFalsePropertySignature(): ts.PropertySignature {
+  return ts.factory.createPropertySignature(
+    undefined,
+    COMMON_IDENTIFIERS.withJoins,
+    undefined,
+    ts.factory.createLiteralTypeNode(ts.factory.createFalse()),
+  );
+}
+
+export function createOptionsTypeNode(): ts.TypeNode {
+  const properties: Array<ts.PropertySignature> = [
+    createTransactionOptionPropertySignature(),
+  ];
+
+  return ts.factory.createTypeLiteralNode(properties);
+}
+
+export function createOptionsParameterDeclaration(
+  joins: ReadonlyArray<TableJoin>,
+): ts.ParameterDeclaration {
   return ts.factory.createParameterDeclaration(
     undefined,
     undefined,
@@ -33,59 +77,34 @@ export function createOptionsParameterDeclaration(): ts.ParameterDeclaration {
 }
 
 export function createClientTypeDeclaration(
-  def: DatabaseDefinition,
+  database: DatabaseDefinition,
 ): ts.TypeAliasDeclaration {
   return ts.factory.createTypeAliasDeclaration(
     undefined,
     [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
-    ts.factory.createIdentifier(createDatabaseClientName(def)),
+    ts.factory.createIdentifier(createDatabaseClientName(database)),
     undefined,
     ts.factory.createTypeLiteralNode(
-      def.body.map((next) => {
+      database.body.map((table) => {
         return ts.factory.createPropertySignature(
           undefined,
-          ts.factory.createIdentifier(next.name.value.toLowerCase()),
+          ts.factory.createIdentifier(table.name.value.toLowerCase()),
           undefined,
           ts.factory.createTypeLiteralNode([
-            ts.factory.createPropertySignature(
-              undefined,
-              ts.factory.createIdentifier('add'),
-              undefined,
-              createAddMethodTypeNode(next),
-            ),
-            ts.factory.createPropertySignature(
-              undefined,
-              ts.factory.createIdentifier('get'),
-              undefined,
-              createGetMethodTypeNode(next),
-            ),
-            ts.factory.createPropertySignature(
-              undefined,
-              ts.factory.createIdentifier('getAll'),
-              undefined,
-              createGetAllMethodTypeNode(next),
-            ),
+            createAddMethodSignature(table),
+            ...createGetMethodSignaturesForTable({
+              table,
+              database,
+              methodName: 'get',
+            }),
+            ...createGetMethodSignaturesForTable({
+              table,
+              database,
+              methodName: 'getAll',
+            }),
           ]),
         );
       }),
     ),
   );
-}
-
-export function getItemNameForTable(def: TableDefinition): string {
-  const itemAnnotations = getAnnotationsByName(def.annotations, 'item');
-  if (itemAnnotations.length > 1) {
-    throw new Error('Table can only include one annotation for "item"');
-  }
-
-  const itemArguments = itemAnnotations[0]?.arguments;
-  if (itemArguments && itemArguments.length > 1) {
-    throw new Error('Table can only include one name alias');
-  }
-
-  if (itemArguments && itemArguments.length > 0) {
-    return itemArguments[0]?.value;
-  }
-
-  return capitalize(def.name.value);
 }
