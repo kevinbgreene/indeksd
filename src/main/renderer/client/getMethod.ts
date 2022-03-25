@@ -12,12 +12,7 @@ import { capitalize } from '../utils';
 import { clientVariableNameForTable, createOnErrorHandler } from './common';
 import { createGetObjectStore } from './objectStore';
 import { createTransactionWithMode } from './transaction';
-import {
-  createTransactionOptionPropertySignature,
-  createWithJoinsBooleanPropertySignature,
-  createWithJoinsFalsePropertySignature,
-  createWithJoinsTruePropertySignature,
-} from './type';
+import { createOptionsParameterDeclaration } from './type';
 import {
   getItemNameWithJoinsForTable,
   getJoinsForTable,
@@ -184,52 +179,25 @@ function createOptionsParamForGetMethod({
 }): ts.ParameterDeclaration {
   switch (withJoins) {
     case 'true':
-      return ts.factory.createParameterDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.options,
-        ts.factory.createToken(ts.SyntaxKind.QuestionToken),
-        ts.factory.createTypeLiteralNode([
-          createTransactionOptionPropertySignature(),
-          createWithJoinsTruePropertySignature(),
-        ]),
-      );
+      return createOptionsParameterDeclaration({
+        optional: true,
+        includes: ['transaction', 'with_joins_true'],
+      });
     case 'false':
-      return ts.factory.createParameterDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.options,
-        undefined,
-        ts.factory.createTypeLiteralNode([
-          createTransactionOptionPropertySignature(),
-          createWithJoinsFalsePropertySignature(),
-        ]),
-      );
+      return createOptionsParameterDeclaration({
+        optional: false,
+        includes: ['transaction', 'with_joins_false'],
+      });
     case 'none':
-      return ts.factory.createParameterDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.options,
-        ts.factory.createToken(ts.SyntaxKind.QuestionToken),
-        ts.factory.createTypeLiteralNode([
-          createTransactionOptionPropertySignature(),
-        ]),
-      );
+      return createOptionsParameterDeclaration({
+        optional: true,
+        includes: ['transaction'],
+      });
     default:
-      return ts.factory.createParameterDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.options,
-        ts.factory.createToken(ts.SyntaxKind.QuestionToken),
-        ts.factory.createTypeLiteralNode([
-          createTransactionOptionPropertySignature(),
-          createWithJoinsBooleanPropertySignature(),
-        ]),
-      );
+      return createOptionsParameterDeclaration({
+        optional: true,
+        includes: ['transaction', 'with_joins_default'],
+      });
   }
 }
 
@@ -699,7 +667,7 @@ export function createIndexPredicates(
                 ts.SyntaxKind.AmpersandAmpersandToken,
                 ts.factory.createCallExpression(
                   ts.factory.createPropertyAccessExpression(
-                    ts.factory.createIdentifier('Reflect'),
+                    COMMON_IDENTIFIERS.Reflect,
                     'has',
                   ),
                   undefined,

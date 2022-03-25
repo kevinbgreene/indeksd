@@ -79,7 +79,10 @@ export function createAddMethod(
         undefined,
         createAddArgsTypeReference(table),
       ),
-      createOptionsParameterDeclaration([]),
+      createOptionsParameterDeclaration({
+        optional: true,
+        includes: ['transaction'],
+      }),
     ],
     addMethodReturnType(table),
     ts.factory.createBlock(
@@ -124,7 +127,10 @@ export function createAddMethodSignature(
         undefined,
         createAddArgsTypeNode(table),
       ),
-      createOptionsParameterDeclaration([]),
+      createOptionsParameterDeclaration({
+        optional: true,
+        includes: ['transaction'],
+      }),
     ],
     addMethodReturnType(table),
   );

@@ -222,7 +222,7 @@ function createDbAssignment(): ts.Statement {
     undefined,
     ts.factory.createPropertyAccessExpression(
       COMMON_IDENTIFIERS.DBOpenRequest,
-      ts.factory.createIdentifier('result'),
+      COMMON_IDENTIFIERS.result,
     ),
   );
 }

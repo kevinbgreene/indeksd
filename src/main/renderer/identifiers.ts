@@ -4,6 +4,7 @@ export const COMMON_IDENTIFIERS = {
   arg: ts.factory.createIdentifier('arg'),
   db: ts.factory.createIdentifier('db'),
   // event: ts.factory.createIdentifier('event'),
+  count: ts.factory.createIdentifier('count'),
   globalThis: ts.factory.createIdentifier('globalThis'),
   addRequest: ts.factory.createIdentifier('addRequest'),
   get: ts.factory.createIdentifier('get'),
@@ -26,6 +27,7 @@ export const COMMON_IDENTIFIERS = {
   DBOpenRequest: ts.factory.createIdentifier('DBOpenRequest'),
   Map: ts.factory.createIdentifier('Map'),
   Promise: ts.factory.createIdentifier('Promise'),
+  Reflect: ts.factory.createIdentifier('Reflect'),
   Set: ts.factory.createIdentifier('Set'),
   ReadonlyArray: ts.factory.createIdentifier('ReadonlyArray'),
 };
