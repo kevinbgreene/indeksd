@@ -22,6 +22,7 @@ import {
   getPrimaryKeyFieldForTable,
   getIndexFieldsForTable,
   isAutoIncrementField,
+  getIndexesForTable,
 } from './keys';
 import { createBooleanLiteral } from './types';
 import { createItemTypeWithJoinsForTable } from './joins';
@@ -186,8 +187,8 @@ function createObjectStoreIndexes(
 function createIndexesForStore(
   def: TableDefinition,
 ): ReadonlyArray<ts.Statement> {
-  const indexes = getIndexFieldsForTable(def);
-  return indexes.map((next) => {
+  const indexes = getIndexesForTable(def);
+  return indexes.indexes.map((next) => {
     return ts.factory.createExpressionStatement(
       ts.factory.createCallExpression(
         ts.factory.createPropertyAccessExpression(
@@ -196,18 +197,25 @@ function createIndexesForStore(
         ),
         undefined,
         [
-          ts.factory.createStringLiteral(next.name.value),
-          ts.factory.createStringLiteral(next.name.value),
-          optionsForIndex(next),
+          ts.factory.createStringLiteral(next.name),
+          ts.factory.createArrayLiteralExpression(
+            next.fields.map((next) => {
+              return ts.factory.createStringLiteral(next.name.value);
+            }),
+          ),
+          optionsForIndex(next.fields),
         ],
       ),
     );
   });
 }
 
-function optionsForIndex(def: FieldDefinition): ts.ObjectLiteralExpression {
-  const isFieldUnique =
-    annotationsFromList(def.annotations, ['unique']) != null;
+function optionsForIndex(
+  defs: ReadonlyArray<FieldDefinition>,
+): ts.ObjectLiteralExpression {
+  const isFieldUnique = defs.every(
+    (next) => annotationsFromList(next.annotations, ['unique']) != null,
+  );
   return ts.factory.createObjectLiteralExpression([
     ts.factory.createPropertyAssignment(
       ts.factory.createIdentifier('unique'),

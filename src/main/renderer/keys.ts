@@ -10,12 +10,6 @@ import { typeForTypeNode } from './types';
 
 export type IndexKind = 'autoincrement' | 'key' | 'index';
 
-export type TableIndex = Readonly<{
-  indexKind: IndexKind;
-  name: string;
-  type: TypeNode;
-}>;
-
 export function doAnnotationsInclude(
   annotations: ReadonlyArray<Annotation>,
   names: ReadonlyArray<string>,
@@ -36,26 +30,137 @@ export function annotationsFromList(
   return null;
 }
 
-export function getIndexesForTable(
-  def: TableDefinition,
-): ReadonlyArray<TableIndex> {
-  const indexFields = def.body.filter((next) => {
-    return annotationsFromList(next.annotations, [
-      'autoincrement',
-      'index',
-      'key',
-    ]);
+const INDEX_ANNOTATIONS: ReadonlyArray<string> = [
+  'autoincrement',
+  'key',
+  'index',
+];
+
+function isIndexAnnotation(arg: string): arg is IndexKind {
+  return INDEX_ANNOTATIONS.includes(arg);
+}
+
+function getIndexAnnotationsForField(
+  field: FieldDefinition,
+): ReadonlyArray<Annotation> {
+  return field.annotations.reduce<Array<Annotation>>((acc, next) => {
+    if (isIndexAnnotation(next.name.value)) {
+      acc.push(next);
+    }
+    return acc;
+  }, []);
+}
+
+export type TableIndexMap = Readonly<{
+  key: TableIndex | null;
+  indexes: ReadonlyArray<TableIndex>;
+}>;
+
+export type TableIndex = Readonly<{
+  kind: IndexKind;
+  name: string;
+  fields: ReadonlyArray<FieldDefinition>;
+}>;
+
+export function getIndexesForTable(table: TableDefinition): TableIndexMap {
+  const indexes: {
+    [name: string]: {
+      kind: IndexKind;
+      name: string;
+      fields: Array<FieldDefinition>;
+    };
+  } = {};
+  table.body.forEach((field: FieldDefinition) => {
+    const indexesForField: {
+      [name: string]: {
+        kind: IndexKind;
+        name: string;
+        field: FieldDefinition;
+      };
+    } = {};
+    const annotations = getIndexAnnotationsForField(field);
+    annotations.forEach((annotation) => {
+      const annotationName = annotation.name.value;
+      switch (annotationName) {
+        case 'index': {
+          const args = annotation.arguments;
+          const indexName = args[0]?.value ?? field.name.value;
+          if (indexesForField[indexName] !== undefined) {
+            throw new Error(
+              `Multiple definitions of index "${indexName}" on field ${field.name.value}`,
+            );
+          }
+
+          indexesForField[indexName] = {
+            kind: 'index',
+            name: indexName,
+            field,
+          };
+          break;
+        }
+        case 'key': {
+          if (indexesForField['key'] !== undefined) {
+            throw new Error(
+              `Multiple definitions of index "key" on field ${field.name.value}`,
+            );
+          }
+          indexesForField['key'] = {
+            kind: 'key',
+            name: field.name.value,
+            field,
+          };
+          break;
+        }
+        case 'autoincrement': {
+          if (indexesForField['autoincrement'] !== undefined) {
+            throw new Error(
+              `Multiple definitions of index "autoincrement" on field ${field.name.value}`,
+            );
+          }
+
+          indexesForField['autoincrement'] = {
+            kind: 'autoincrement',
+            name: field.name.value,
+            field,
+          };
+          break;
+        }
+      }
+    });
+
+    Object.entries(indexesForField).forEach(([key, value]) => {
+      if (indexes[key]) {
+        indexes[key].fields = [...indexes[key].fields, value.field];
+      } else {
+        indexes[key] = {
+          kind: value.kind,
+          name: value.name,
+          fields: [value.field],
+        };
+      }
+    });
   });
 
-  return indexFields.map((next) => {
-    return {
-      indexKind: annotationsFromList(next.annotations, ['autoincrement', 'key'])
-        ? 'key'
-        : 'index',
-      name: next.name.value,
-      type: next.type,
-    };
-  });
+  return Object.values(indexes).reduce(
+    (
+      acc: {
+        key: TableIndex | null;
+        indexes: Array<TableIndex>;
+      },
+      value,
+    ) => {
+      switch (value.kind) {
+        case 'autoincrement':
+        case 'key':
+          acc['key'] = value;
+          break;
+        case 'index':
+          acc['indexes'].push(value);
+      }
+      return acc;
+    },
+    { key: null, indexes: [] },
+  );
 }
 
 export function getAutoIncrementFieldForTable(
@@ -75,7 +180,7 @@ export function getAutoIncrementFieldForTable(
 }
 
 export function isPrimaryKey(tableIndex: TableIndex): boolean {
-  return ['autoincrement', 'key'].includes(tableIndex.indexKind);
+  return ['autoincrement', 'key'].includes(tableIndex.kind);
 }
 
 export function isAutoIncrementField(def: FieldDefinition): boolean {

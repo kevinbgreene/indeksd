@@ -1,12 +1,21 @@
 import * as ts from 'typescript';
 import { COMMON_IDENTIFIERS } from '../identifiers';
-import { DatabaseDefinition, TableDefinition } from '../../parser';
+import {
+  DatabaseDefinition,
+  FieldDefinition,
+  TableDefinition,
+} from '../../parser';
 import {
   createConstStatement,
   createLetStatement,
   createNewPromiseWithBody,
 } from '../helpers';
-import { getIndexesForTable, isPrimaryKey, TableIndex } from '../keys';
+import {
+  getIndexesForTable,
+  isPrimaryKey,
+  TableIndex,
+  TableIndexMap,
+} from '../keys';
 import { typeForTypeNode } from '../types';
 import { capitalize } from '../utils';
 import { clientVariableNameForTable, createOnErrorHandler } from './common';
@@ -421,10 +430,19 @@ function createHandlingForIndexGet({
               ),
               undefined,
               [
-                ts.factory.createPropertyAccessExpression(
-                  COMMON_IDENTIFIERS.arg,
-                  tableIndex.name,
-                ),
+                tableIndex.fields.length > 1
+                  ? ts.factory.createArrayLiteralExpression(
+                      tableIndex.fields.map((next) => {
+                        return ts.factory.createPropertyAccessExpression(
+                          COMMON_IDENTIFIERS.arg,
+                          next.name.value,
+                        );
+                      }),
+                    )
+                  : ts.factory.createPropertyAccessExpression(
+                      COMMON_IDENTIFIERS.arg,
+                      tableIndex.fields[0].name.value,
+                    ),
               ],
             ),
           ),
@@ -563,8 +581,12 @@ export function createIndexNarrowing({
   database: DatabaseDefinition;
   methodName: 'get' | 'getAll';
 }): ReadonlyArray<ts.Statement> {
-  const indexes = getIndexesForTable(table);
-  const keys = indexes.filter((next) => next.indexKind !== 'index');
+  const indexes: ReadonlyArray<TableIndex> = Object.values(
+    getIndexesForTable(table),
+  )
+    .flat()
+    .filter((next): next is TableIndex => next != null);
+  const keys = indexes.filter((next) => next.kind !== 'index');
 
   return [
     createLetStatement(
@@ -587,7 +609,7 @@ export function createIndexNarrowing({
       ),
       ts.factory.createBlock(
         [
-          createOnErrorHandler('getRequest', []),
+          createOnErrorHandler(COMMON_IDENTIFIERS.getRequest, []),
           createOnSuccessHandler(table, database, methodName),
         ],
         true,
@@ -618,18 +640,41 @@ export function createIndexNarrowing({
   ];
 }
 
+function normalizeName(name: string): string {
+  let result = name;
+  if (result.includes('-')) {
+    result = result
+      .split('-')
+      .map((next) => capitalize(next))
+      .join('');
+  }
+
+  if (result.includes('_')) {
+    result = result
+      .split('_')
+      .map((next) => capitalize(next))
+      .join('');
+  }
+
+  return capitalize(result);
+}
+
 function createPredicateNameForIndex(
   def: TableDefinition,
-  field: TableIndex,
+  index: TableIndex,
 ): string {
-  return `is${capitalize(def.name.value)}${capitalize(field.name)}Index`;
+  return `is${capitalize(def.name.value)}${normalizeName(index.name)}Index`;
 }
 
 export function createIndexPredicates(
   table: TableDefinition,
   database: DatabaseDefinition,
 ): ReadonlyArray<ts.Statement> {
-  const indexes = getIndexesForTable(table);
+  const indexes: ReadonlyArray<TableIndex> = Object.values(
+    getIndexesForTable(table),
+  )
+    .flat()
+    .filter((next): next is TableIndex => next != null);
 
   return indexes.map((next) => {
     return createConstStatement(
@@ -643,7 +688,7 @@ export function createIndexPredicates(
             undefined,
             undefined,
             undefined,
-            'arg',
+            COMMON_IDENTIFIERS.arg,
             undefined,
             createGetArgsTypeNode(table),
             undefined,
@@ -665,16 +710,24 @@ export function createIndexPredicates(
                   ts.factory.createStringLiteral('object'),
                 ),
                 ts.SyntaxKind.AmpersandAmpersandToken,
-                ts.factory.createCallExpression(
-                  ts.factory.createPropertyAccessExpression(
-                    COMMON_IDENTIFIERS.Reflect,
-                    'has',
+                ts.factory.createBinaryExpression(
+                  ts.factory.createBinaryExpression(
+                    ts.factory.createPropertyAccessExpression(
+                      ts.factory.createCallExpression(
+                        ts.factory.createPropertyAccessExpression(
+                          COMMON_IDENTIFIERS.Object,
+                          'keys',
+                        ),
+                        undefined,
+                        [COMMON_IDENTIFIERS.arg],
+                      ),
+                      'length',
+                    ),
+                    ts.SyntaxKind.EqualsEqualsEqualsToken,
+                    ts.factory.createNumericLiteral(next.fields.length),
                   ),
-                  undefined,
-                  [
-                    COMMON_IDENTIFIERS.arg,
-                    ts.factory.createStringLiteral(next.name),
-                  ],
+                  ts.SyntaxKind.AmpersandAmpersandToken,
+                  createReflectionForFields(next.fields),
                 ),
               ),
             ),
@@ -686,35 +739,69 @@ export function createIndexPredicates(
   });
 }
 
+function createReflectionForFields([
+  next,
+  ...remaining
+]: ReadonlyArray<FieldDefinition>): ts.Expression {
+  if (remaining.length === 0) {
+    return ts.factory.createCallExpression(
+      ts.factory.createPropertyAccessExpression(
+        COMMON_IDENTIFIERS.Reflect,
+        'has',
+      ),
+      undefined,
+      [COMMON_IDENTIFIERS.arg, ts.factory.createStringLiteral(next.name.value)],
+    );
+  } else {
+    return ts.factory.createBinaryExpression(
+      ts.factory.createCallExpression(
+        ts.factory.createPropertyAccessExpression(
+          COMMON_IDENTIFIERS.Reflect,
+          'has',
+        ),
+        undefined,
+        [
+          COMMON_IDENTIFIERS.arg,
+          ts.factory.createStringLiteral(next.name.value),
+        ],
+      ),
+      ts.SyntaxKind.AmpersandAmpersandToken,
+      createReflectionForFields(remaining),
+    );
+  }
+}
+
 function objectTypeForIndexResolvingPrimaryKeys(
   index: TableIndex,
   database: DatabaseDefinition,
 ): ts.TypeLiteralNode {
-  return ts.factory.createTypeLiteralNode([
-    ts.factory.createPropertySignature(
-      undefined,
-      ts.factory.createIdentifier(index.name),
-      undefined,
-      typeNodeResolvingPrimaryKeys(index.type, database),
-    ),
-  ]);
+  return ts.factory.createTypeLiteralNode(
+    index.fields.map((next) => {
+      return ts.factory.createPropertySignature(
+        undefined,
+        ts.factory.createIdentifier(next.name.value),
+        undefined,
+        typeNodeResolvingPrimaryKeys(next.type, database),
+      );
+    }),
+  );
 }
 
 function typeNodesForIndexResolvingPrimaryKeys(
   index: TableIndex,
   database: DatabaseDefinition,
 ): ReadonlyArray<ts.TypeNode> {
-  switch (index.indexKind) {
+  switch (index.kind) {
     case 'autoincrement':
     case 'key':
       return [
-        typeForTypeNode(index.type),
+        typeForTypeNode(index.fields[0].type),
         objectTypeForIndexResolvingPrimaryKeys(index, database),
       ];
     case 'index':
       return [objectTypeForIndexResolvingPrimaryKeys(index, database)];
     default:
-      const _exhaustiveCheck: never = index.indexKind;
+      const _exhaustiveCheck: never = index.kind;
       throw new Error(
         `Non-exhaustive check for index kind ${_exhaustiveCheck}`,
       );
@@ -725,13 +812,16 @@ export function createGetArgsTypeDeclaration(
   table: TableDefinition,
   database: DatabaseDefinition,
 ): ts.TypeAliasDeclaration {
+  const indexes = Object.values(getIndexesForTable(table))
+    .flat()
+    .filter((next): next is TableIndex => next != null);
   return ts.factory.createTypeAliasDeclaration(
     undefined,
     [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
     ts.factory.createIdentifier(createGetArgsTypeName(table)),
     [],
     ts.factory.createUnionTypeNode(
-      getIndexesForTable(table).flatMap((next) => {
+      indexes.flatMap((next) => {
         return typeNodesForIndexResolvingPrimaryKeys(next, database);
       }),
     ),
@@ -746,7 +836,7 @@ export function createOnSuccessHandler(
   return ts.factory.createExpressionStatement(
     ts.factory.createAssignment(
       ts.factory.createPropertyAccessExpression(
-        ts.factory.createIdentifier('getRequest'),
+        COMMON_IDENTIFIERS.getRequest,
         COMMON_IDENTIFIERS.onsuccess,
       ),
       ts.factory.createArrowFunction(
@@ -767,7 +857,7 @@ export function createOnSuccessHandler(
 function resultAccess(): ts.PropertyAccessExpression {
   return ts.factory.createPropertyAccessExpression(
     ts.factory.createAsExpression(
-      ts.factory.createIdentifier('getRequest'),
+      COMMON_IDENTIFIERS.getRequest,
       ts.factory.createTypeReferenceNode(
         COMMON_IDENTIFIERS.IDBRequest,
         undefined,

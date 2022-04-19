@@ -20,13 +20,13 @@ export function createClientTypeNode(def: DatabaseDefinition): ts.TypeNode {
 }
 
 export function createOnErrorHandler(
-  methodName: string,
+  methodName: ts.Identifier,
   requestTypeArgs: ReadonlyArray<ts.TypeNode>,
 ): ts.Statement {
   return ts.factory.createExpressionStatement(
     ts.factory.createAssignment(
       ts.factory.createPropertyAccessExpression(
-        ts.factory.createIdentifier(methodName),
+        methodName,
         COMMON_IDENTIFIERS.onerror,
       ),
       ts.factory.createArrowFunction(
@@ -44,7 +44,7 @@ export function createOnErrorHandler(
                 [
                   ts.factory.createPropertyAccessExpression(
                     ts.factory.createAsExpression(
-                      ts.factory.createIdentifier(methodName),
+                      methodName,
                       ts.factory.createTypeReferenceNode(
                         COMMON_IDENTIFIERS.IDBRequest,
                         requestTypeArgs,
@@ -64,13 +64,13 @@ export function createOnErrorHandler(
 }
 
 export function createOnSuccessHandler(
-  methodName: string,
+  methodName: ts.Identifier,
   requestTypeArgs: ReadonlyArray<ts.TypeNode> = [],
 ): ts.Statement {
   return ts.factory.createExpressionStatement(
     ts.factory.createAssignment(
       ts.factory.createPropertyAccessExpression(
-        ts.factory.createIdentifier(methodName),
+        methodName,
         COMMON_IDENTIFIERS.onsuccess,
       ),
       ts.factory.createArrowFunction(
@@ -88,7 +88,7 @@ export function createOnSuccessHandler(
                 [
                   ts.factory.createPropertyAccessExpression(
                     ts.factory.createAsExpression(
-                      ts.factory.createIdentifier(methodName),
+                      methodName,
                       ts.factory.createTypeReferenceNode(
                         COMMON_IDENTIFIERS.IDBRequest,
                         requestTypeArgs,

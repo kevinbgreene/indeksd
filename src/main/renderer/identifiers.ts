@@ -26,6 +26,7 @@ export const COMMON_IDENTIFIERS = {
   IDBTransaction: ts.factory.createIdentifier('IDBTransaction'),
   DBOpenRequest: ts.factory.createIdentifier('DBOpenRequest'),
   Map: ts.factory.createIdentifier('Map'),
+  Object: ts.factory.createIdentifier('Object'),
   Promise: ts.factory.createIdentifier('Promise'),
   Reflect: ts.factory.createIdentifier('Reflect'),
   Set: ts.factory.createIdentifier('Set'),

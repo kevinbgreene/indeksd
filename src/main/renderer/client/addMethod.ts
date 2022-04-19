@@ -152,7 +152,11 @@ function createAddRequestHandling(
         [COMMON_IDENTIFIERS.arg],
       ),
     ),
-    createOnErrorHandler('addRequest', [getPrimaryKeyTypeForTable(table)]),
-    createOnSuccessHandler('addRequest', [getPrimaryKeyTypeForTable(table)]),
+    createOnErrorHandler(COMMON_IDENTIFIERS.addRequest, [
+      getPrimaryKeyTypeForTable(table),
+    ]),
+    createOnSuccessHandler(COMMON_IDENTIFIERS.addRequest, [
+      getPrimaryKeyTypeForTable(table),
+    ]),
   ];
 }

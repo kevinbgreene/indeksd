@@ -19,9 +19,9 @@ database MyDatabase {
 
   table Posts @item("Post") {
     @key postId: string;
-    name: string;
+    @index("name") @index("name_author") name: string;
     content: string;
-    @index author: Authors;
+    @index @index("name_author") author: Authors;
   }
 
 }

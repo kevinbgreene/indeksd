@@ -333,9 +333,9 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         posts: postsClient
     };
 }
-export function init(): Promise<MyDatabaseClient> {
+export function init(version: number = 1): Promise<MyDatabaseClient> {
     return new Promise((resolve, reject) => {
-        const DBOpenRequest = globalThis.indexedDB.open("MyDatabase");
+        const DBOpenRequest = globalThis.indexedDB.open("MyDatabase", version);
         DBOpenRequest.onerror = () => {
             reject("Error opening database: MyDatabase");
         };
