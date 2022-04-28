@@ -187,8 +187,8 @@ function createObjectStoreIndexes(
 function createIndexesForStore(
   def: TableDefinition,
 ): ReadonlyArray<ts.Statement> {
-  const indexes = getIndexesForTable(def);
-  return indexes.indexes.map((next) => {
+  const tableIndexes = getIndexesForTable(def);
+  return tableIndexes.indexes.map((next) => {
     return ts.factory.createExpressionStatement(
       ts.factory.createCallExpression(
         ts.factory.createPropertyAccessExpression(

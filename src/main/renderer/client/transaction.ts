@@ -82,6 +82,7 @@ function createConditionalWithJoinsForTable({
             ]),
           ],
         ),
+        ts.factory.createStringLiteral(mode),
       ],
     ),
     ts.factory.createToken(ts.SyntaxKind.ColonToken),

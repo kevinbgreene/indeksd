@@ -453,7 +453,7 @@ function createHandlingForIndexGet({
     createConditionsForIndexes({
       table,
       methodName,
-      indexes: remaining,
+      tableIndexes: remaining,
       keys,
     })[0],
   );
@@ -506,7 +506,7 @@ function createHandlingForPrimaryKeyGet({
     createConditionsForIndexes({
       table,
       methodName,
-      indexes: remaining,
+      tableIndexes: remaining,
       keys,
     })[0],
   );
@@ -515,16 +515,16 @@ function createHandlingForPrimaryKeyGet({
 function createConditionsForIndexes({
   table,
   methodName,
-  indexes,
+  tableIndexes,
   keys,
 }: {
   table: TableDefinition;
   methodName: 'get' | 'getAll';
-  indexes: ReadonlyArray<TableIndex>;
+  tableIndexes: ReadonlyArray<TableIndex>;
   keys: ReadonlyArray<TableIndex>;
 }): ReadonlyArray<ts.Statement> {
-  if (indexes.length > 0) {
-    const [next, ...remaining] = indexes;
+  if (tableIndexes.length > 0) {
+    const [next, ...remaining] = tableIndexes;
     if (isPrimaryKey(next)) {
       return [
         createHandlingForPrimaryKeyGet({
@@ -581,12 +581,12 @@ export function createIndexNarrowing({
   database: DatabaseDefinition;
   methodName: 'get' | 'getAll';
 }): ReadonlyArray<ts.Statement> {
-  const indexes: ReadonlyArray<TableIndex> = Object.values(
+  const tableIndexes: ReadonlyArray<TableIndex> = Object.values(
     getIndexesForTable(table),
   )
     .flat()
     .filter((next): next is TableIndex => next != null);
-  const keys = indexes.filter((next) => next.kind !== 'index');
+  const keys = tableIndexes.filter((next) => next.kind !== 'index');
 
   return [
     createLetStatement(
@@ -600,7 +600,7 @@ export function createIndexNarrowing({
       ]),
       ts.factory.createNull(),
     ),
-    ...createConditionsForIndexes({ table, methodName, indexes, keys }),
+    ...createConditionsForIndexes({ table, methodName, tableIndexes, keys }),
     ts.factory.createIfStatement(
       ts.factory.createBinaryExpression(
         COMMON_IDENTIFIERS.getRequest,

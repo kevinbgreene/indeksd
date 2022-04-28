@@ -40,32 +40,48 @@ export type AuthorsGetArgs = number | {
 export type PostsGetArgs = string | {
     postId: string;
 } | {
+    name: string;
+} | {
+    name: string;
+    author: number;
+} | {
     author: number;
 };
 const isAuthorsIdIndex = (arg: AuthorsGetArgs): arg is {
     id: number;
 } => {
-    return typeof arg === "object" && Reflect.has(arg, "id");
+    return typeof arg === "object" && (Object.keys(arg).length === 1 && Reflect.has(arg, "id"));
 };
 const isAuthorsNameIndex = (arg: AuthorsGetArgs): arg is {
     name: string;
 } => {
-    return typeof arg === "object" && Reflect.has(arg, "name");
+    return typeof arg === "object" && (Object.keys(arg).length === 1 && Reflect.has(arg, "name"));
 };
 const isAuthorsEmailIndex = (arg: AuthorsGetArgs): arg is {
     email: string;
 } => {
-    return typeof arg === "object" && Reflect.has(arg, "email");
+    return typeof arg === "object" && (Object.keys(arg).length === 1 && Reflect.has(arg, "email"));
 };
 const isPostsPostIdIndex = (arg: PostsGetArgs): arg is {
     postId: string;
 } => {
-    return typeof arg === "object" && Reflect.has(arg, "postId");
+    return typeof arg === "object" && (Object.keys(arg).length === 1 && Reflect.has(arg, "postId"));
+};
+const isPostsNameIndex = (arg: PostsGetArgs): arg is {
+    name: string;
+} => {
+    return typeof arg === "object" && (Object.keys(arg).length === 1 && Reflect.has(arg, "name"));
+};
+const isPostsNameAuthorIndex = (arg: PostsGetArgs): arg is {
+    name: string;
+    author: number;
+} => {
+    return typeof arg === "object" && (Object.keys(arg).length === 2 && (Reflect.has(arg, "name") && Reflect.has(arg, "author")));
 };
 const isPostsAuthorIndex = (arg: PostsGetArgs): arg is {
     author: number;
 } => {
-    return typeof arg === "object" && Reflect.has(arg, "author");
+    return typeof arg === "object" && (Object.keys(arg).length === 1 && Reflect.has(arg, "author"));
 };
 export type MyDatabaseClient = {
     authors: {
@@ -227,11 +243,19 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             withJoins?: boolean;
         }): Promise<Post | PostWithJoins> {
             return new Promise((resolve, reject) => {
-                const tx = options?.transaction ?? options?.withJoins != false ? db.transaction(Array.from(new Set([...AuthorsClient.tablesForTransaction, ...PostsClient.tablesForTransaction]))) : db.transaction(["Posts"], "readonly");
+                const tx = options?.transaction ?? options?.withJoins != false ? db.transaction(Array.from(new Set([...AuthorsClient.tablesForTransaction, ...PostsClient.tablesForTransaction])), "readonly") : db.transaction(["Posts"], "readonly");
                 const store = tx.objectStore("Posts");
                 let getRequest: IDBRequest | null = null;
                 if (isPostsPostIdIndex(arg)) {
                     getRequest = store.get(arg.postId);
+                }
+                else if (isPostsNameIndex(arg)) {
+                    const index: IDBIndex = store.index("name");
+                    getRequest = index.get(arg.name);
+                }
+                else if (isPostsNameAuthorIndex(arg)) {
+                    const index: IDBIndex = store.index("name_author");
+                    getRequest = index.get([arg.name, arg.author]);
                 }
                 else if (isPostsAuthorIndex(arg)) {
                     const index: IDBIndex = store.index("author");
@@ -281,11 +305,19 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             withJoins?: boolean;
         }): Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>> {
             return new Promise((resolve, reject) => {
-                const tx = options?.transaction ?? options?.withJoins != false ? db.transaction(Array.from(new Set([...AuthorsClient.tablesForTransaction, ...PostsClient.tablesForTransaction]))) : db.transaction(["Posts"], "readonly");
+                const tx = options?.transaction ?? options?.withJoins != false ? db.transaction(Array.from(new Set([...AuthorsClient.tablesForTransaction, ...PostsClient.tablesForTransaction])), "readonly") : db.transaction(["Posts"], "readonly");
                 const store = tx.objectStore("Posts");
                 let getRequest: IDBRequest | null = null;
                 if (isPostsPostIdIndex(arg)) {
                     getRequest = store.getAll(arg.postId);
+                }
+                else if (isPostsNameIndex(arg)) {
+                    const index: IDBIndex = store.index("name");
+                    getRequest = index.getAll(arg.name);
+                }
+                else if (isPostsNameAuthorIndex(arg)) {
+                    const index: IDBIndex = store.index("name_author");
+                    getRequest = index.getAll([arg.name, arg.author]);
                 }
                 else if (isPostsAuthorIndex(arg)) {
                     const index: IDBIndex = store.index("author");
@@ -333,9 +365,9 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         posts: postsClient
     };
 }
-export function init(version: number = 1): Promise<MyDatabaseClient> {
+export function init(): Promise<MyDatabaseClient> {
     return new Promise((resolve, reject) => {
-        const DBOpenRequest = globalThis.indexedDB.open("MyDatabase", version);
+        const DBOpenRequest = globalThis.indexedDB.open("MyDatabase");
         DBOpenRequest.onerror = () => {
             reject("Error opening database: MyDatabase");
         };
@@ -347,9 +379,11 @@ export function init(version: number = 1): Promise<MyDatabaseClient> {
             const db = DBOpenRequest.result;
             const AuthorsStore = db.createObjectStore("Authors", { keyPath: "id", autoIncrement: true });
             const PostsStore = db.createObjectStore("Posts", { keyPath: "postId" });
-            AuthorsStore.createIndex("name", "name", { unique: false });
-            AuthorsStore.createIndex("email", "email", { unique: true });
-            PostsStore.createIndex("author", "author", { unique: false });
+            AuthorsStore.createIndex("name", ["name"], { unique: false });
+            AuthorsStore.createIndex("email", ["email"], { unique: true });
+            PostsStore.createIndex("name", ["name"], { unique: false });
+            PostsStore.createIndex("name_author", ["name", "author"], { unique: false });
+            PostsStore.createIndex("author", ["author"], { unique: false });
         };
     });
 }
