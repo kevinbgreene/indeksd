@@ -1,389 +1,512 @@
 export type Value = 1 | 2 | 3;
-export type Value2 = "1" | true | 0.2;
+export type Value2 = '1' | true | 0.2;
 export type Value3 = Value | false;
-export type Value4 = "some";
-export type Value5 = (1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10);
+export type Value4 = 'some';
+export type Value5 = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 export type Value6 = {
-    firstName: string;
-    lastName: string;
+  firstName: string;
+  lastName: string;
 };
-export type Value7 = [
-    string,
-    Value6
-];
+export type Value7 = [string, Value6];
 export type Authors = {
-    id: number;
-    name: string;
-    email: string;
+  id: number;
+  name: string;
+  email: string;
 };
 export type Post = {
-    postId: string;
-    name: string;
-    content: string;
-    author: number;
+  postId: string;
+  name: string;
+  content: string;
+  author: number;
 };
 export type PostWithJoins = {
-    postId: string;
-    name: string;
-    content: string;
-    author: Authors;
+  postId: string;
+  name: string;
+  content: string;
+  author: Authors;
 };
-export type AuthorsAddArgs = Omit<Authors, "id">;
+export type AuthorsAddArgs = Omit<Authors, 'id'>;
 export type PostsAddArgs = Post;
-export type AuthorsGetArgs = number | {
-    id: number;
-} | {
-    name: string;
-} | {
-    email: string;
-};
-export type PostsGetArgs = string | {
-    postId: string;
-} | {
-    name: string;
-} | {
-    name: string;
-    author: number;
-} | {
-    author: number;
-};
-const isAuthorsIdIndex = (arg: AuthorsGetArgs): arg is {
-    id: number;
+export type AuthorsGetArgs =
+  | number
+  | {
+      id: number;
+    }
+  | {
+      name: string;
+    }
+  | {
+      email: string;
+    };
+export type PostsGetArgs =
+  | string
+  | {
+      postId: string;
+    }
+  | {
+      name: string;
+    }
+  | {
+      name: string;
+      author: number;
+    }
+  | {
+      author: number;
+    };
+const isAuthorsIdIndex = (
+  arg: AuthorsGetArgs,
+): arg is {
+  id: number;
 } => {
-    return typeof arg === "object" && (Object.keys(arg).length === 1 && Reflect.has(arg, "id"));
+  return (
+    typeof arg === 'object' &&
+    Object.keys(arg).length === 1 &&
+    Reflect.has(arg, 'id')
+  );
 };
-const isAuthorsNameIndex = (arg: AuthorsGetArgs): arg is {
-    name: string;
+const isAuthorsNameIndex = (
+  arg: AuthorsGetArgs,
+): arg is {
+  name: string;
 } => {
-    return typeof arg === "object" && (Object.keys(arg).length === 1 && Reflect.has(arg, "name"));
+  return (
+    typeof arg === 'object' &&
+    Object.keys(arg).length === 1 &&
+    Reflect.has(arg, 'name')
+  );
 };
-const isAuthorsEmailIndex = (arg: AuthorsGetArgs): arg is {
-    email: string;
+const isAuthorsEmailIndex = (
+  arg: AuthorsGetArgs,
+): arg is {
+  email: string;
 } => {
-    return typeof arg === "object" && (Object.keys(arg).length === 1 && Reflect.has(arg, "email"));
+  return (
+    typeof arg === 'object' &&
+    Object.keys(arg).length === 1 &&
+    Reflect.has(arg, 'email')
+  );
 };
-const isPostsPostIdIndex = (arg: PostsGetArgs): arg is {
-    postId: string;
+const isPostsPostIdIndex = (
+  arg: PostsGetArgs,
+): arg is {
+  postId: string;
 } => {
-    return typeof arg === "object" && (Object.keys(arg).length === 1 && Reflect.has(arg, "postId"));
+  return (
+    typeof arg === 'object' &&
+    Object.keys(arg).length === 1 &&
+    Reflect.has(arg, 'postId')
+  );
 };
-const isPostsNameIndex = (arg: PostsGetArgs): arg is {
-    name: string;
+const isPostsNameIndex = (
+  arg: PostsGetArgs,
+): arg is {
+  name: string;
 } => {
-    return typeof arg === "object" && (Object.keys(arg).length === 1 && Reflect.has(arg, "name"));
+  return (
+    typeof arg === 'object' &&
+    Object.keys(arg).length === 1 &&
+    Reflect.has(arg, 'name')
+  );
 };
-const isPostsNameAuthorIndex = (arg: PostsGetArgs): arg is {
-    name: string;
-    author: number;
+const isPostsNameAuthorIndex = (
+  arg: PostsGetArgs,
+): arg is {
+  name: string;
+  author: number;
 } => {
-    return typeof arg === "object" && (Object.keys(arg).length === 2 && (Reflect.has(arg, "name") && Reflect.has(arg, "author")));
+  return (
+    typeof arg === 'object' &&
+    Object.keys(arg).length === 2 &&
+    Reflect.has(arg, 'name') &&
+    Reflect.has(arg, 'author')
+  );
 };
-const isPostsAuthorIndex = (arg: PostsGetArgs): arg is {
-    author: number;
+const isPostsAuthorIndex = (
+  arg: PostsGetArgs,
+): arg is {
+  author: number;
 } => {
-    return typeof arg === "object" && (Object.keys(arg).length === 1 && Reflect.has(arg, "author"));
+  return (
+    typeof arg === 'object' &&
+    Object.keys(arg).length === 1 &&
+    Reflect.has(arg, 'author')
+  );
 };
 export type MyDatabaseClient = {
-    authors: {
-        add(arg: Omit<Authors, "id">, options?: {
-            transaction?: IDBTransaction;
-        }): Promise<number>;
-        get(arg: AuthorsGetArgs, options?: {
-            transaction?: IDBTransaction;
-        }): Promise<Authors>;
-        getAll(arg: AuthorsGetArgs, options?: {
-            transaction?: IDBTransaction;
-        }): Promise<ReadonlyArray<Authors>>;
-    };
-    posts: {
-        add(arg: Post, options?: {
-            transaction?: IDBTransaction;
-        }): Promise<string>;
-        get(arg: PostsGetArgs, options?: {
-            transaction?: IDBTransaction;
-            withJoins?: true;
-        }): Promise<PostWithJoins>;
-        get(arg: PostsGetArgs, options: {
-            transaction?: IDBTransaction;
-            withJoins: false;
-        }): Promise<Post>;
-        get(arg: PostsGetArgs, options?: {
-            transaction?: IDBTransaction;
-            withJoins?: boolean;
-        }): Promise<Post | PostWithJoins>;
-        getAll(arg: PostsGetArgs, options?: {
-            transaction?: IDBTransaction;
-            withJoins?: true;
-        }): Promise<ReadonlyArray<PostWithJoins>>;
-        getAll(arg: PostsGetArgs, options: {
-            transaction?: IDBTransaction;
-            withJoins: false;
-        }): Promise<ReadonlyArray<Post>>;
-        getAll(arg: PostsGetArgs, options?: {
-            transaction?: IDBTransaction;
-            withJoins?: boolean;
-        }): Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>>;
-    };
+  authors: {
+    add(
+      arg: Omit<Authors, 'id'>,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<number>;
+    get(
+      arg: AuthorsGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<Authors>;
+    getAll(
+      arg: AuthorsGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<ReadonlyArray<Authors>>;
+  };
+  posts: {
+    add(
+      arg: Post,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<string>;
+    get(
+      arg: PostsGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+        withJoins?: true;
+      },
+    ): Promise<PostWithJoins>;
+    get(
+      arg: PostsGetArgs,
+      options: {
+        transaction?: IDBTransaction;
+        withJoins: false;
+      },
+    ): Promise<Post>;
+    get(
+      arg: PostsGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+        withJoins?: boolean;
+      },
+    ): Promise<Post | PostWithJoins>;
+    getAll(
+      arg: PostsGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+        withJoins?: true;
+      },
+    ): Promise<ReadonlyArray<PostWithJoins>>;
+    getAll(
+      arg: PostsGetArgs,
+      options: {
+        transaction?: IDBTransaction;
+        withJoins: false;
+      },
+    ): Promise<ReadonlyArray<Post>>;
+    getAll(
+      arg: PostsGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+        withJoins?: boolean;
+      },
+    ): Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>>;
+  };
 };
 function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
-    class AuthorsClient {
-        static tablesForTransaction: ReadonlyArray<string> = ["Authors"];
-        add(arg: AuthorsAddArgs, options?: {
-            transaction?: IDBTransaction;
-        }): Promise<number> {
-            return new Promise((resolve, reject) => {
-                const tx = options?.transaction ?? db.transaction(["Authors"], "readwrite");
-                const store = tx.objectStore("Authors");
-                const addRequest: IDBRequest = store.add(arg);
-                addRequest.onerror = () => {
-                    reject((addRequest as IDBRequest<number>).error);
-                };
-                addRequest.onsuccess = () => {
-                    resolve((addRequest as IDBRequest<number>).result);
-                };
-            });
-        }
-        get(arg: AuthorsGetArgs, options?: {
-            transaction?: IDBTransaction;
-        }): Promise<Authors> {
-            return new Promise((resolve, reject) => {
-                const tx = options?.transaction ?? db.transaction(["Authors"], "readonly");
-                const store = tx.objectStore("Authors");
-                let getRequest: IDBRequest | null = null;
-                if (isAuthorsIdIndex(arg)) {
-                    getRequest = store.get(arg.id);
-                }
-                else if (isAuthorsNameIndex(arg)) {
-                    const index: IDBIndex = store.index("name");
-                    getRequest = index.get(arg.name);
-                }
-                else if (isAuthorsEmailIndex(arg)) {
-                    const index: IDBIndex = store.index("email");
-                    getRequest = index.get(arg.email);
-                }
-                else {
-                    getRequest = store.get(arg);
-                }
-                if (getRequest != null) {
-                    getRequest.onerror = () => {
-                        reject((getRequest as IDBRequest).error);
-                    };
-                    getRequest.onsuccess = () => {
-                        resolve((getRequest as IDBRequest).result);
-                    };
-                }
-                else {
-                    reject(new Error("No available index for given query"));
-                }
-            });
-        }
-        getAll(arg: AuthorsGetArgs, options?: {
-            transaction?: IDBTransaction;
-        }): Promise<ReadonlyArray<Authors>> {
-            return new Promise((resolve, reject) => {
-                const tx = options?.transaction ?? db.transaction(["Authors"], "readonly");
-                const store = tx.objectStore("Authors");
-                let getRequest: IDBRequest | null = null;
-                if (isAuthorsIdIndex(arg)) {
-                    getRequest = store.getAll(arg.id);
-                }
-                else if (isAuthorsNameIndex(arg)) {
-                    const index: IDBIndex = store.index("name");
-                    getRequest = index.getAll(arg.name);
-                }
-                else if (isAuthorsEmailIndex(arg)) {
-                    const index: IDBIndex = store.index("email");
-                    getRequest = index.getAll(arg.email);
-                }
-                else {
-                    getRequest = store.getAll(arg);
-                }
-                if (getRequest != null) {
-                    getRequest.onerror = () => {
-                        reject((getRequest as IDBRequest).error);
-                    };
-                    getRequest.onsuccess = () => {
-                        resolve((getRequest as IDBRequest).result);
-                    };
-                }
-                else {
-                    reject(new Error("No available index for given query"));
-                }
-            });
-        }
+  class AuthorsClient {
+    static tablesForTransaction: ReadonlyArray<string> = ['Authors'];
+    add(
+      arg: AuthorsAddArgs,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<number> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ?? db.transaction(['Authors'], 'readwrite');
+        const store = tx.objectStore('Authors');
+        const addRequest: IDBRequest = store.add(arg);
+        addRequest.onerror = () => {
+          reject((addRequest as IDBRequest<number>).error);
+        };
+        addRequest.onsuccess = () => {
+          resolve((addRequest as IDBRequest<number>).result);
+        };
+      });
     }
-    const authorsClient = new AuthorsClient();
-    class PostsClient {
-        static tablesForTransaction: ReadonlyArray<string> = ["Posts", "Authors"];
-        add(arg: PostsAddArgs, options?: {
-            transaction?: IDBTransaction;
-        }): Promise<string> {
-            return new Promise((resolve, reject) => {
-                const tx = options?.transaction ?? db.transaction(["Posts"], "readwrite");
-                const store = tx.objectStore("Posts");
-                const addRequest: IDBRequest = store.add(arg);
-                addRequest.onerror = () => {
-                    reject((addRequest as IDBRequest<string>).error);
-                };
-                addRequest.onsuccess = () => {
-                    resolve((addRequest as IDBRequest<string>).result);
-                };
-            });
+    get(
+      arg: AuthorsGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<Authors> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ?? db.transaction(['Authors'], 'readonly');
+        const store = tx.objectStore('Authors');
+        let getRequest: IDBRequest | null = null;
+        if (isAuthorsIdIndex(arg)) {
+          getRequest = store.get(arg.id);
+        } else if (isAuthorsNameIndex(arg)) {
+          const index: IDBIndex = store.index('name');
+          getRequest = index.get(arg.name);
+        } else if (isAuthorsEmailIndex(arg)) {
+          const index: IDBIndex = store.index('email');
+          getRequest = index.get(arg.email);
+        } else {
+          getRequest = store.get(arg);
         }
-        get(arg: PostsGetArgs, options?: {
-            transaction?: IDBTransaction;
-            withJoins?: true;
-        }): Promise<PostWithJoins>;
-        get(arg: PostsGetArgs, options: {
-            transaction?: IDBTransaction;
-            withJoins: false;
-        }): Promise<Post>;
-        get(arg: PostsGetArgs, options?: {
-            transaction?: IDBTransaction;
-            withJoins?: boolean;
-        }): Promise<Post | PostWithJoins> {
-            return new Promise((resolve, reject) => {
-                const tx = options?.transaction ?? options?.withJoins != false ? db.transaction(Array.from(new Set([...AuthorsClient.tablesForTransaction, ...PostsClient.tablesForTransaction])), "readonly") : db.transaction(["Posts"], "readonly");
-                const store = tx.objectStore("Posts");
-                let getRequest: IDBRequest | null = null;
-                if (isPostsPostIdIndex(arg)) {
-                    getRequest = store.get(arg.postId);
-                }
-                else if (isPostsNameIndex(arg)) {
-                    const index: IDBIndex = store.index("name");
-                    getRequest = index.get(arg.name);
-                }
-                else if (isPostsNameAuthorIndex(arg)) {
-                    const index: IDBIndex = store.index("name_author");
-                    getRequest = index.get([arg.name, arg.author]);
-                }
-                else if (isPostsAuthorIndex(arg)) {
-                    const index: IDBIndex = store.index("author");
-                    getRequest = index.get(arg.author);
-                }
-                else {
-                    getRequest = store.get(arg);
-                }
-                if (getRequest != null) {
-                    getRequest.onerror = () => {
-                        reject((getRequest as IDBRequest).error);
-                    };
-                    getRequest.onsuccess = () => {
-                        if (getRequest != null) {
-                            const post: Post = (getRequest as IDBRequest).result;
-                            if (options?.withJoins != false) {
-                                Promise.all([
-                                    authorsClient.get(post.author)
-                                ]).then(([author]) => {
-                                    resolve({
-                                        ...post,
-                                        author
-                                    });
-                                });
-                            }
-                            else {
-                                resolve(post);
-                            }
-                        }
-                    };
-                }
-                else {
-                    reject(new Error("No available index for given query"));
-                }
-            });
+        if (getRequest != null) {
+          getRequest.onerror = () => {
+            reject((getRequest as IDBRequest).error);
+          };
+          getRequest.onsuccess = () => {
+            resolve((getRequest as IDBRequest).result);
+          };
+        } else {
+          reject(new Error('No available index for given query'));
         }
-        getAll(arg: PostsGetArgs, options?: {
-            transaction?: IDBTransaction;
-            withJoins?: true;
-        }): Promise<ReadonlyArray<PostWithJoins>>;
-        getAll(arg: PostsGetArgs, options: {
-            transaction?: IDBTransaction;
-            withJoins: false;
-        }): Promise<ReadonlyArray<Post>>;
-        getAll(arg: PostsGetArgs, options?: {
-            transaction?: IDBTransaction;
-            withJoins?: boolean;
-        }): Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>> {
-            return new Promise((resolve, reject) => {
-                const tx = options?.transaction ?? options?.withJoins != false ? db.transaction(Array.from(new Set([...AuthorsClient.tablesForTransaction, ...PostsClient.tablesForTransaction])), "readonly") : db.transaction(["Posts"], "readonly");
-                const store = tx.objectStore("Posts");
-                let getRequest: IDBRequest | null = null;
-                if (isPostsPostIdIndex(arg)) {
-                    getRequest = store.getAll(arg.postId);
-                }
-                else if (isPostsNameIndex(arg)) {
-                    const index: IDBIndex = store.index("name");
-                    getRequest = index.getAll(arg.name);
-                }
-                else if (isPostsNameAuthorIndex(arg)) {
-                    const index: IDBIndex = store.index("name_author");
-                    getRequest = index.getAll([arg.name, arg.author]);
-                }
-                else if (isPostsAuthorIndex(arg)) {
-                    const index: IDBIndex = store.index("author");
-                    getRequest = index.getAll(arg.author);
-                }
-                else {
-                    getRequest = store.getAll(arg);
-                }
-                if (getRequest != null) {
-                    getRequest.onerror = () => {
-                        reject((getRequest as IDBRequest).error);
-                    };
-                    getRequest.onsuccess = () => {
-                        if (getRequest != null) {
-                            const post: ReadonlyArray<Post> = (getRequest as IDBRequest).result;
-                            if (options?.withJoins != false) {
-                                Promise.all(post.map(result => {
-                                    return Promise.all([
-                                        authorsClient.get(result.author)
-                                    ]).then(([author]) => {
-                                        return {
-                                            ...result,
-                                            author
-                                        };
-                                    });
-                                })).then((result: ReadonlyArray<PostWithJoins>) => {
-                                    resolve(result);
-                                });
-                            }
-                            else {
-                                resolve(post);
-                            }
-                        }
-                    };
-                }
-                else {
-                    reject(new Error("No available index for given query"));
-                }
-            });
-        }
+      });
     }
-    const postsClient = new PostsClient();
-    return {
-        authors: authorsClient,
-        posts: postsClient
-    };
+    getAll(
+      arg: AuthorsGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<ReadonlyArray<Authors>> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ?? db.transaction(['Authors'], 'readonly');
+        const store = tx.objectStore('Authors');
+        let getRequest: IDBRequest | null = null;
+        if (isAuthorsIdIndex(arg)) {
+          getRequest = store.getAll(arg.id);
+        } else if (isAuthorsNameIndex(arg)) {
+          const index: IDBIndex = store.index('name');
+          getRequest = index.getAll(arg.name);
+        } else if (isAuthorsEmailIndex(arg)) {
+          const index: IDBIndex = store.index('email');
+          getRequest = index.getAll(arg.email);
+        } else {
+          getRequest = store.getAll(arg);
+        }
+        if (getRequest != null) {
+          getRequest.onerror = () => {
+            reject((getRequest as IDBRequest).error);
+          };
+          getRequest.onsuccess = () => {
+            resolve((getRequest as IDBRequest).result);
+          };
+        } else {
+          reject(new Error('No available index for given query'));
+        }
+      });
+    }
+  }
+  const authorsClient = new AuthorsClient();
+  class PostsClient {
+    static tablesForTransaction: ReadonlyArray<string> = ['Posts', 'Authors'];
+    add(
+      arg: PostsAddArgs,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<string> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ?? db.transaction(['Posts'], 'readwrite');
+        const store = tx.objectStore('Posts');
+        const addRequest: IDBRequest = store.add(arg);
+        addRequest.onerror = () => {
+          reject((addRequest as IDBRequest<string>).error);
+        };
+        addRequest.onsuccess = () => {
+          resolve((addRequest as IDBRequest<string>).result);
+        };
+      });
+    }
+    get(
+      arg: PostsGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+        withJoins?: true;
+      },
+    ): Promise<PostWithJoins>;
+    get(
+      arg: PostsGetArgs,
+      options: {
+        transaction?: IDBTransaction;
+        withJoins: false;
+      },
+    ): Promise<Post>;
+    get(
+      arg: PostsGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+        withJoins?: boolean;
+      },
+    ): Promise<Post | PostWithJoins> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ?? options?.withJoins != false
+            ? db.transaction(
+                Array.from(
+                  new Set([
+                    ...AuthorsClient.tablesForTransaction,
+                    ...PostsClient.tablesForTransaction,
+                  ]),
+                ),
+                'readonly',
+              )
+            : db.transaction(['Posts'], 'readonly');
+        const store = tx.objectStore('Posts');
+        let getRequest: IDBRequest | null = null;
+        if (isPostsPostIdIndex(arg)) {
+          getRequest = store.get(arg.postId);
+        } else if (isPostsNameIndex(arg)) {
+          const index: IDBIndex = store.index('name');
+          getRequest = index.get(arg.name);
+        } else if (isPostsNameAuthorIndex(arg)) {
+          const index: IDBIndex = store.index('name_author');
+          getRequest = index.get([arg.name, arg.author]);
+        } else if (isPostsAuthorIndex(arg)) {
+          const index: IDBIndex = store.index('author');
+          getRequest = index.get(arg.author);
+        } else {
+          getRequest = store.get(arg);
+        }
+        if (getRequest != null) {
+          getRequest.onerror = () => {
+            reject((getRequest as IDBRequest).error);
+          };
+          getRequest.onsuccess = () => {
+            if (getRequest != null) {
+              const post: Post = (getRequest as IDBRequest).result;
+              if (options?.withJoins != false) {
+                Promise.all([authorsClient.get(post.author)]).then(
+                  ([author]) => {
+                    resolve({
+                      ...post,
+                      author,
+                    });
+                  },
+                );
+              } else {
+                resolve(post);
+              }
+            }
+          };
+        } else {
+          reject(new Error('No available index for given query'));
+        }
+      });
+    }
+    getAll(
+      arg: PostsGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+        withJoins?: true;
+      },
+    ): Promise<ReadonlyArray<PostWithJoins>>;
+    getAll(
+      arg: PostsGetArgs,
+      options: {
+        transaction?: IDBTransaction;
+        withJoins: false;
+      },
+    ): Promise<ReadonlyArray<Post>>;
+    getAll(
+      arg: PostsGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+        withJoins?: boolean;
+      },
+    ): Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ?? options?.withJoins != false
+            ? db.transaction(
+                Array.from(
+                  new Set([
+                    ...AuthorsClient.tablesForTransaction,
+                    ...PostsClient.tablesForTransaction,
+                  ]),
+                ),
+                'readonly',
+              )
+            : db.transaction(['Posts'], 'readonly');
+        const store = tx.objectStore('Posts');
+        let getRequest: IDBRequest | null = null;
+        if (isPostsPostIdIndex(arg)) {
+          getRequest = store.getAll(arg.postId);
+        } else if (isPostsNameIndex(arg)) {
+          const index: IDBIndex = store.index('name');
+          getRequest = index.getAll(arg.name);
+        } else if (isPostsNameAuthorIndex(arg)) {
+          const index: IDBIndex = store.index('name_author');
+          getRequest = index.getAll([arg.name, arg.author]);
+        } else if (isPostsAuthorIndex(arg)) {
+          const index: IDBIndex = store.index('author');
+          getRequest = index.getAll(arg.author);
+        } else {
+          getRequest = store.getAll(arg);
+        }
+        if (getRequest != null) {
+          getRequest.onerror = () => {
+            reject((getRequest as IDBRequest).error);
+          };
+          getRequest.onsuccess = () => {
+            if (getRequest != null) {
+              const post: ReadonlyArray<Post> = (getRequest as IDBRequest)
+                .result;
+              if (options?.withJoins != false) {
+                Promise.all(
+                  post.map((result) => {
+                    return Promise.all([authorsClient.get(result.author)]).then(
+                      ([author]) => {
+                        return {
+                          ...result,
+                          author,
+                        };
+                      },
+                    );
+                  }),
+                ).then((result: ReadonlyArray<PostWithJoins>) => {
+                  resolve(result);
+                });
+              } else {
+                resolve(post);
+              }
+            }
+          };
+        } else {
+          reject(new Error('No available index for given query'));
+        }
+      });
+    }
+  }
+  const postsClient = new PostsClient();
+  return {
+    authors: authorsClient,
+    posts: postsClient,
+  };
 }
 export function init(): Promise<MyDatabaseClient> {
-    return new Promise((resolve, reject) => {
-        const DBOpenRequest = globalThis.indexedDB.open("MyDatabase");
-        DBOpenRequest.onerror = () => {
-            reject("Error opening database: MyDatabase");
-        };
-        DBOpenRequest.onsuccess = () => {
-            const db = DBOpenRequest.result;
-            resolve(createDatabaseClient(db));
-        };
-        DBOpenRequest.onupgradeneeded = () => {
-            const db = DBOpenRequest.result;
-            const AuthorsStore = db.createObjectStore("Authors", { keyPath: "id", autoIncrement: true });
-            const PostsStore = db.createObjectStore("Posts", { keyPath: "postId" });
-            AuthorsStore.createIndex("name", ["name"], { unique: false });
-            AuthorsStore.createIndex("email", ["email"], { unique: true });
-            PostsStore.createIndex("name", ["name"], { unique: false });
-            PostsStore.createIndex("name_author", ["name", "author"], { unique: false });
-            PostsStore.createIndex("author", ["author"], { unique: false });
-        };
-    });
+  return new Promise((resolve, reject) => {
+    const DBOpenRequest = globalThis.indexedDB.open('MyDatabase', 3);
+    DBOpenRequest.onerror = () => {
+      reject('Error opening database: MyDatabase');
+    };
+    DBOpenRequest.onsuccess = () => {
+      const db = DBOpenRequest.result;
+      resolve(createDatabaseClient(db));
+    };
+    DBOpenRequest.onupgradeneeded = () => {
+      const db = DBOpenRequest.result;
+      const AuthorsStore = db.createObjectStore('Authors', {
+        keyPath: 'id',
+        autoIncrement: true,
+      });
+      const PostsStore = db.createObjectStore('Posts', { keyPath: 'postId' });
+      AuthorsStore.createIndex('name', ['name'], { unique: false });
+      AuthorsStore.createIndex('email', ['email'], { unique: true });
+      PostsStore.createIndex('name', ['name'], { unique: false });
+      PostsStore.createIndex('name_author', ['name', 'author'], {
+        unique: false,
+      });
+      PostsStore.createIndex('author', ['author'], { unique: false });
+    };
+  });
 }

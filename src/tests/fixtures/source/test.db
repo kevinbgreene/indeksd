@@ -9,7 +9,7 @@ type Value6 = {
 };
 type Value7 = [string, Value6];
 
-database MyDatabase @version(1) {
+database MyDatabase @version(3) {
 
   table Authors {
     @autoincrement id: number;

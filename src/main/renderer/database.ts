@@ -29,6 +29,29 @@ import { createItemTypeWithJoinsForTable } from './joins';
 export function renderDatabaseDefinition(
   def: DatabaseDefinition,
 ): ReadonlyArray<ts.Statement> {
+  const version: number = def.annotations.reduce((acc, next) => {
+    if (next.name.value === 'version') {
+      if (next.arguments.length === 1) {
+        const argument = next.arguments[0];
+        if (argument.kind === 'IntegerLiteral') {
+          return parseInt(argument.value);
+        } else {
+          throw new Error(
+            `The "version" annotation only accepts integer arguments but found: ${argument.kind}`,
+          );
+        }
+      } else {
+        throw new Error(
+          `The "version" annotation expects one argument but found: ${next.arguments.length}`,
+        );
+      }
+    } else {
+      throw new Error(
+        `Database only supports the "version" annotation but found: ${next.name.value}`,
+      );
+    }
+  }, 1);
+
   return [
     ...def.body.flatMap((next) => {
       return createItemTypeWithJoinsForTable(next, def);
@@ -72,7 +95,10 @@ export function renderDatabaseDefinition(
                         'open',
                       ),
                       undefined,
-                      [ts.factory.createStringLiteral(def.name.value)],
+                      [
+                        ts.factory.createStringLiteral(def.name.value),
+                        ts.factory.createNumericLiteral(version),
+                      ],
                     ),
                   ),
                   createEventHandler('onerror', [
