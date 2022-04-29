@@ -101,7 +101,7 @@ export interface FloatLiteral extends SyntaxNode {
 export interface Annotation extends SyntaxNode {
   kind: 'Annotation';
   name: Identifier;
-  arguments: ReadonlyArray<StringLiteral>;
+  arguments: ReadonlyArray<StringLiteral | IntegerLiteral>;
 }
 
 export interface FieldDefinition extends SyntaxNode {
@@ -138,13 +138,12 @@ export interface DatabaseDefinition extends SyntaxNode {
   kind: 'DatabaseDefinition';
   name: Identifier;
   body: ReadonlyArray<TableDefinition>;
-  tokens?: ReadonlyArray<Token>;
+  annotations: Annotations;
 }
 
 export interface DatabaseSchema extends Node {
   kind: 'DatabaseSchema';
   body: ReadonlyArray<DatabaseDefinition | TypeDefinition>;
-  tokens?: ReadonlyArray<Token>;
 }
 
 export interface Identifier extends SyntaxNode {

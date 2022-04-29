@@ -15,10 +15,11 @@ import {
   ObjectLiteralTypeNode,
   PropertySignature,
   TupleTypeNode,
+  IntegerLiteral,
 } from './types';
 
 import * as factory from '../factory';
-import { createStringLiteral } from '../factory';
+import { createIntegerLiteral, createStringLiteral } from '../factory';
 
 export interface Parser {
   parse(): DatabaseSchema;
@@ -105,6 +106,8 @@ export function createParser(tokens: Array<Token>): Parser {
       `Unable to find identifier for database`,
     );
 
+    const annotations = parseAnnotations();
+
     const openBrace: Token | null = consume('LeftBraceToken');
     requireValue(openBrace, `Expected opening curly brace`);
 
@@ -125,6 +128,7 @@ export function createParser(tokens: Array<Token>): Parser {
       factory.createIdentifier(nameToken.text, nameToken.loc),
       tables,
       location,
+      annotations,
     );
   }
 
@@ -267,8 +271,10 @@ export function createParser(tokens: Array<Token>): Parser {
     );
   }
 
-  function parseAnnotationArgs(): ReadonlyArray<StringLiteral> {
-    const args: Array<StringLiteral> = [];
+  function parseAnnotationArgs(): ReadonlyArray<
+    StringLiteral | IntegerLiteral
+  > {
+    const args: Array<StringLiteral | IntegerLiteral> = [];
     const openParen: Token | null = consume('LeftParenToken');
     if (openParen == null) {
       return args;
@@ -276,9 +282,16 @@ export function createParser(tokens: Array<Token>): Parser {
 
     while (!check('RightParenToken')) {
       readListSeparator();
-      const arg = consume('StringLiteral');
+      const arg = consume('StringLiteral', 'IntegerLiteral');
       if (arg) {
-        args.push(createStringLiteral(arg.text, arg.loc));
+        switch (arg.kind) {
+          case 'StringLiteral':
+            args.push(createStringLiteral(arg.text, arg.loc));
+            break;
+          case 'IntegerLiteral':
+            args.push(createIntegerLiteral(arg.text, arg.loc));
+            break;
+        }
       }
 
       if (isStartOfDefinition(currentToken())) {

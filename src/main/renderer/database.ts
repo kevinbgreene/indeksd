@@ -4,7 +4,6 @@ import {
   DatabaseDefinition,
   FieldDefinition,
   TableDefinition,
-  TypeNode,
 } from '../parser';
 import {
   createClientFunction,

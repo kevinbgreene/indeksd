@@ -1,4 +1,5 @@
 import * as ts from 'typescript';
+import * as prettier from 'prettier';
 const pkg = require('../../package.json');
 
 const eslintDisable: string = ' eslint-disable ';
@@ -48,5 +49,14 @@ export function print(
     console.warn(`Printing empty file`);
   }
 
-  return printer.printBundle(ts.factory.createBundle([bodyFile]));
+  const content = printer.printBundle(ts.factory.createBundle([bodyFile]));
+
+  return prettier.format(content, {
+    semi: true,
+    singleQuote: true,
+    arrowParens: 'always',
+    tabWidth: 2,
+    trailingComma: 'all',
+    parser: 'typescript',
+  });
 }

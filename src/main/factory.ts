@@ -46,11 +46,13 @@ export function createDatabaseDefinition(
   name: Identifier,
   tables: ReadonlyArray<TableDefinition>,
   location: TextLocation,
+  annotations: ReadonlyArray<Annotation>,
 ): DatabaseDefinition {
   return {
     kind: 'DatabaseDefinition',
     name,
     body: tables,
+    annotations,
     loc: location,
   };
 }
@@ -85,7 +87,7 @@ export function createTypeDefinition(
 
 export function createAnnotation(
   name: Identifier,
-  args: ReadonlyArray<StringLiteral>,
+  args: ReadonlyArray<StringLiteral | IntegerLiteral>,
   location: TextLocation,
 ): Annotation {
   return {
