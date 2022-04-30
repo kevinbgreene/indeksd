@@ -836,7 +836,7 @@ export function createOnSuccessHandler(
         undefined,
         undefined,
         ts.factory.createBlock(
-          [...createFieldResolution(table, database, methodName)],
+          [createFieldResolution(table, database, methodName)],
           true,
         ),
       ),
@@ -853,7 +853,7 @@ function resultAccess(): ts.PropertyAccessExpression {
         undefined,
       ),
     ),
-    'result',
+    COMMON_IDENTIFIERS.result,
   );
 }
 
@@ -865,45 +865,76 @@ function createFieldResolution(
   table: TableDefinition,
   database: DatabaseDefinition,
   methodName: 'get' | 'getAll',
-): ReadonlyArray<ts.Statement> {
+): ts.Statement {
   const joins: ReadonlyArray<TableJoin> = getJoinsForTable(table, database);
   const isGetAll = methodName === 'getAll';
 
   if (joins.length === 0) {
-    return [
+    return createSafeHandlingForResult([
       ts.factory.createExpressionStatement(
         ts.factory.createCallExpression(COMMON_IDENTIFIERS.resolve, undefined, [
           resultAccess(),
         ]),
       ),
-    ];
+    ]);
   } else {
-    return [
-      ts.factory.createIfStatement(
-        ts.factory.createBinaryExpression(
-          COMMON_IDENTIFIERS.DBGetRequest,
-          ts.SyntaxKind.ExclamationEqualsToken,
-          ts.factory.createNull(),
-        ),
-        ts.factory.createBlock(
-          [
-            createConstStatement(
-              resultVariableName(table),
-              createItemTypeNodeWithoutJoinsForTable({
-                table,
-                asArray: isGetAll,
-              }),
-              resultAccess(),
-            ),
-            isGetAll
-              ? createHandlingForGetAllWithJoin({ table, joins })
-              : createHandlingForGetWithJoin({ table, joins }),
-          ],
-          true,
-        ),
+    return createSafeHandlingForResult([
+      createConstStatement(
+        resultVariableName(table),
+        createItemTypeNodeWithoutJoinsForTable({
+          table,
+          asArray: isGetAll,
+        }),
+        resultAccess(),
       ),
-    ];
+      isGetAll
+        ? createHandlingForGetAllWithJoin({ table, joins })
+        : createHandlingForGetWithJoin({ table, joins }),
+    ]);
   }
+}
+
+function createSafeHandlingForResult(
+  body: ReadonlyArray<ts.Statement>,
+): ts.IfStatement {
+  return ts.factory.createIfStatement(
+    ts.factory.createBinaryExpression(
+      ts.factory.createBinaryExpression(
+        COMMON_IDENTIFIERS.DBGetRequest,
+        ts.SyntaxKind.ExclamationEqualsToken,
+        ts.factory.createNull(),
+      ),
+      ts.SyntaxKind.AmpersandAmpersandToken,
+      ts.factory.createBinaryExpression(
+        ts.factory.createPropertyAccessExpression(
+          COMMON_IDENTIFIERS.DBGetRequest,
+          COMMON_IDENTIFIERS.result,
+        ),
+
+        ts.SyntaxKind.ExclamationEqualsToken,
+        ts.factory.createNull(),
+      ),
+    ),
+    ts.factory.createBlock(body, true),
+    ts.factory.createBlock(
+      [
+        ts.factory.createExpressionStatement(
+          ts.factory.createCallExpression(
+            COMMON_IDENTIFIERS.reject,
+            undefined,
+            [
+              ts.factory.createNewExpression(
+                COMMON_IDENTIFIERS.Error,
+                undefined,
+                [ts.factory.createStringLiteral('No result found for query')],
+              ),
+            ],
+          ),
+        ),
+      ],
+      true,
+    ),
+  );
 }
 
 function createHandlingForGetWithJoin({
