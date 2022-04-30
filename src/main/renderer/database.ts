@@ -25,6 +25,7 @@ import {
 } from './keys';
 import { createBooleanLiteral } from './types';
 import { createItemTypeWithJoinsForTable } from './joins';
+import { createPutArgsTypeDeclaration } from './client/putMethod';
 
 export function renderDatabaseDefinition(
   def: DatabaseDefinition,
@@ -58,6 +59,9 @@ export function renderDatabaseDefinition(
     }),
     ...def.body.map((next) => {
       return createAddArgsTypeDeclaration(next);
+    }),
+    ...def.body.map((next) => {
+      return createPutArgsTypeDeclaration(next);
     }),
     ...def.body.map((next) => {
       return createGetArgsTypeDeclaration(next, def);

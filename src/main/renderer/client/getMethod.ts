@@ -10,12 +10,7 @@ import {
   createLetStatement,
   createNewPromiseWithBody,
 } from '../helpers';
-import {
-  getIndexesForTable,
-  isPrimaryKey,
-  TableIndex,
-  TableIndexMap,
-} from '../keys';
+import { getIndexesForTable, isPrimaryKey, TableIndex } from '../keys';
 import { typeForTypeNode } from '../types';
 import { capitalize } from '../utils';
 import { clientVariableNameForTable, createOnErrorHandler } from './common';
@@ -409,12 +404,12 @@ function createHandlingForIndexGet({
     ts.factory.createBlock(
       [
         createConstStatement(
-          ts.factory.createIdentifier('index'),
+          COMMON_IDENTIFIERS.index,
           ts.factory.createTypeReferenceNode('IDBIndex', undefined),
           ts.factory.createCallExpression(
             ts.factory.createPropertyAccessExpression(
-              ts.factory.createIdentifier('store'),
-              'index',
+              COMMON_IDENTIFIERS.store,
+              COMMON_IDENTIFIERS.index,
             ),
             undefined,
             [ts.factory.createStringLiteral(tableIndex.name)],
@@ -422,27 +417,22 @@ function createHandlingForIndexGet({
         ),
         ts.factory.createExpressionStatement(
           ts.factory.createAssignment(
-            COMMON_IDENTIFIERS.getRequest,
+            COMMON_IDENTIFIERS.DBGetRequest,
             ts.factory.createCallExpression(
               ts.factory.createPropertyAccessExpression(
-                ts.factory.createIdentifier('index'),
+                COMMON_IDENTIFIERS.index,
                 ts.factory.createIdentifier(methodName),
               ),
               undefined,
               [
-                tableIndex.fields.length > 1
-                  ? ts.factory.createArrayLiteralExpression(
-                      tableIndex.fields.map((next) => {
-                        return ts.factory.createPropertyAccessExpression(
-                          COMMON_IDENTIFIERS.arg,
-                          next.name.value,
-                        );
-                      }),
-                    )
-                  : ts.factory.createPropertyAccessExpression(
+                ts.factory.createArrayLiteralExpression(
+                  tableIndex.fields.map((next) => {
+                    return ts.factory.createPropertyAccessExpression(
                       COMMON_IDENTIFIERS.arg,
-                      tableIndex.fields[0].name.value,
-                    ),
+                      next.name.value,
+                    );
+                  }),
+                ),
               ],
             ),
           ),
@@ -484,10 +474,10 @@ function createHandlingForPrimaryKeyGet({
       [
         ts.factory.createExpressionStatement(
           ts.factory.createAssignment(
-            COMMON_IDENTIFIERS.getRequest,
+            COMMON_IDENTIFIERS.DBGetRequest,
             ts.factory.createCallExpression(
               ts.factory.createPropertyAccessExpression(
-                ts.factory.createIdentifier('store'),
+                COMMON_IDENTIFIERS.store,
                 ts.factory.createIdentifier(methodName),
               ),
               undefined,
@@ -552,10 +542,10 @@ function createConditionsForIndexes({
         [
           ts.factory.createExpressionStatement(
             ts.factory.createAssignment(
-              COMMON_IDENTIFIERS.getRequest,
+              COMMON_IDENTIFIERS.DBGetRequest,
               ts.factory.createCallExpression(
                 ts.factory.createPropertyAccessExpression(
-                  ts.factory.createIdentifier('store'),
+                  COMMON_IDENTIFIERS.store,
                   ts.factory.createIdentifier(methodName),
                 ),
                 undefined,
@@ -590,7 +580,7 @@ export function createIndexNarrowing({
 
   return [
     createLetStatement(
-      COMMON_IDENTIFIERS.getRequest,
+      COMMON_IDENTIFIERS.DBGetRequest,
       ts.factory.createUnionTypeNode([
         ts.factory.createTypeReferenceNode(
           COMMON_IDENTIFIERS.IDBRequest,
@@ -603,13 +593,13 @@ export function createIndexNarrowing({
     ...createConditionsForIndexes({ table, methodName, tableIndexes, keys }),
     ts.factory.createIfStatement(
       ts.factory.createBinaryExpression(
-        COMMON_IDENTIFIERS.getRequest,
+        COMMON_IDENTIFIERS.DBGetRequest,
         ts.SyntaxKind.ExclamationEqualsToken,
         ts.factory.createNull(),
       ),
       ts.factory.createBlock(
         [
-          createOnErrorHandler(COMMON_IDENTIFIERS.getRequest, []),
+          createOnErrorHandler(COMMON_IDENTIFIERS.DBGetRequest, []),
           createOnSuccessHandler(table, database, methodName),
         ],
         true,
@@ -622,7 +612,7 @@ export function createIndexNarrowing({
               undefined,
               [
                 ts.factory.createNewExpression(
-                  ts.factory.createIdentifier('Error'),
+                  COMMON_IDENTIFIERS.Error,
                   undefined,
                   [
                     ts.factory.createStringLiteral(
@@ -836,7 +826,7 @@ export function createOnSuccessHandler(
   return ts.factory.createExpressionStatement(
     ts.factory.createAssignment(
       ts.factory.createPropertyAccessExpression(
-        COMMON_IDENTIFIERS.getRequest,
+        COMMON_IDENTIFIERS.DBGetRequest,
         COMMON_IDENTIFIERS.onsuccess,
       ),
       ts.factory.createArrowFunction(
@@ -857,7 +847,7 @@ export function createOnSuccessHandler(
 function resultAccess(): ts.PropertyAccessExpression {
   return ts.factory.createPropertyAccessExpression(
     ts.factory.createAsExpression(
-      COMMON_IDENTIFIERS.getRequest,
+      COMMON_IDENTIFIERS.DBGetRequest,
       ts.factory.createTypeReferenceNode(
         COMMON_IDENTIFIERS.IDBRequest,
         undefined,
@@ -891,7 +881,7 @@ function createFieldResolution(
     return [
       ts.factory.createIfStatement(
         ts.factory.createBinaryExpression(
-          COMMON_IDENTIFIERS.getRequest,
+          COMMON_IDENTIFIERS.DBGetRequest,
           ts.SyntaxKind.ExclamationEqualsToken,
           ts.factory.createNull(),
         ),

@@ -1,23 +1,11 @@
 import * as ts from 'typescript';
 import { DatabaseDefinition } from '../../parser';
 import { COMMON_IDENTIFIERS } from '../identifiers';
-import { TableJoin } from '../joins';
 import { createBooleanType, createNumberType } from '../types';
 import { createAddMethodSignature } from './addMethod';
 import { clientTypeNameForTable, createDatabaseClientName } from './common';
 import { createGetMethodSignaturesForTable } from './getMethod';
-
-// function createBaseOptionsTypeDeclaration(
-//   joins: ReadonlyArray<TableJoin>,
-// ): ts.TypeAliasDeclaration {
-//   return ts.factory.createTypeAliasDeclaration(
-//     undefined,
-//     undefined,
-//     ts.factory.createIdentifier('OperationOptions'),
-//     undefined,
-//     createOptionsTypeNode(),
-//   );
-// }
+import { createPutMethodSignature } from './putMethod';
 
 type AvailableOptions =
   | 'transaction'
@@ -132,6 +120,7 @@ export function createClientTypeDeclaration(
         undefined,
         ts.factory.createTypeLiteralNode([
           createAddMethodSignature(table),
+          createPutMethodSignature(table),
           ...createGetMethodSignaturesForTable({
             table,
             database,

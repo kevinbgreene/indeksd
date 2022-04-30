@@ -59,6 +59,19 @@ export function createAddArgsTypeDeclaration(
   );
 }
 
+export function createArgsParamForAddMethod(
+  table: TableDefinition,
+): ts.ParameterDeclaration {
+  return ts.factory.createParameterDeclaration(
+    undefined,
+    undefined,
+    undefined,
+    COMMON_IDENTIFIERS.arg,
+    undefined,
+    ts.factory.createTypeReferenceNode(createAddArgsTypeName(table)),
+  );
+}
+
 export function createAddMethod(
   table: TableDefinition,
   database: DatabaseDefinition,
@@ -67,7 +80,7 @@ export function createAddMethod(
     undefined,
     undefined,
     undefined,
-    'add',
+    COMMON_IDENTIFIERS.add,
     undefined,
     undefined,
     [
@@ -115,18 +128,11 @@ export function createAddMethodSignature(
 ): ts.MethodSignature {
   return ts.factory.createMethodSignature(
     undefined,
-    ts.factory.createIdentifier('add'),
+    COMMON_IDENTIFIERS.add,
     undefined,
     undefined,
     [
-      ts.factory.createParameterDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.arg,
-        undefined,
-        createAddArgsTypeNode(table),
-      ),
+      createArgsParamForAddMethod(table),
       createOptionsParameterDeclaration({
         optional: true,
         includes: ['transaction'],
@@ -141,21 +147,21 @@ function createAddRequestHandling(
 ): ReadonlyArray<ts.Statement> {
   return [
     createConstStatement(
-      COMMON_IDENTIFIERS.addRequest,
+      COMMON_IDENTIFIERS.DBAddRequest,
       ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.IDBRequest),
       ts.factory.createCallExpression(
         ts.factory.createPropertyAccessExpression(
-          ts.factory.createIdentifier('store'),
-          ts.factory.createIdentifier('add'),
+          COMMON_IDENTIFIERS.store,
+          COMMON_IDENTIFIERS.add,
         ),
         undefined,
         [COMMON_IDENTIFIERS.arg],
       ),
     ),
-    createOnErrorHandler(COMMON_IDENTIFIERS.addRequest, [
+    createOnErrorHandler(COMMON_IDENTIFIERS.DBAddRequest, [
       getPrimaryKeyTypeForTable(table),
     ]),
-    createOnSuccessHandler(COMMON_IDENTIFIERS.addRequest, [
+    createOnSuccessHandler(COMMON_IDENTIFIERS.DBAddRequest, [
       getPrimaryKeyTypeForTable(table),
     ]),
   ];

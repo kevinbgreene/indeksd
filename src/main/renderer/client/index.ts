@@ -11,6 +11,7 @@ import {
   clientClassNameForTable,
 } from './common';
 import { createGetMethod } from './getMethod';
+import { createPutMethod } from './putMethod';
 
 export { createClientTypeDeclaration } from './type';
 export { createClientTypeNode } from './common';
@@ -35,6 +36,7 @@ function createClientDeclarationForTable(
       [
         createTablesStaticArray(table, database),
         createAddMethod(table, database),
+        createPutMethod(table, database),
         ...createGetMethod({ table, database, methodName: 'get' }),
         ...createGetMethod({ table, database, methodName: 'getAll' }),
       ],
