@@ -3,8 +3,12 @@ import { COMMON_IDENTIFIERS } from '../identifiers';
 import { DatabaseDefinition, TableDefinition } from '../../parser';
 import { capitalize } from '../utils';
 
-export function clientClassNameForTable(def: TableDefinition): string {
+export function clientTypeNameForTable(def: TableDefinition): string {
   return `${capitalize(def.name.value)}Client`;
+}
+
+export function clientClassNameForTable(def: TableDefinition): string {
+  return `${capitalize(def.name.value)}ClientImpl`;
 }
 
 export function clientVariableNameForTable(def: TableDefinition): string {

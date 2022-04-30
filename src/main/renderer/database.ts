@@ -65,7 +65,7 @@ export function renderDatabaseDefinition(
     ...def.body.flatMap((next) => {
       return createIndexPredicates(next, def);
     }),
-    createClientTypeDeclaration(def),
+    ...createClientTypeDeclaration(def),
     createClientFunction(def),
     ts.factory.createFunctionDeclaration(
       undefined,

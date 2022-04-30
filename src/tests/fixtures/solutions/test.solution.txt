@@ -132,80 +132,82 @@ const isPostsAuthorIndex = (
     Reflect.has(arg, 'author')
   );
 };
+export type AuthorsClient = {
+  add(
+    arg: Omit<Authors, 'id'>,
+    options?: {
+      transaction?: IDBTransaction;
+    },
+  ): Promise<number>;
+  get(
+    arg: AuthorsGetArgs,
+    options?: {
+      transaction?: IDBTransaction;
+    },
+  ): Promise<Authors>;
+  getAll(
+    arg: AuthorsGetArgs,
+    options?: {
+      transaction?: IDBTransaction;
+    },
+  ): Promise<ReadonlyArray<Authors>>;
+};
+export type PostsClient = {
+  add(
+    arg: Post,
+    options?: {
+      transaction?: IDBTransaction;
+    },
+  ): Promise<string>;
+  get(
+    arg: PostsGetArgs,
+    options?: {
+      transaction?: IDBTransaction;
+      withJoins?: true;
+    },
+  ): Promise<PostWithJoins>;
+  get(
+    arg: PostsGetArgs,
+    options: {
+      transaction?: IDBTransaction;
+      withJoins: false;
+    },
+  ): Promise<Post>;
+  get(
+    arg: PostsGetArgs,
+    options?: {
+      transaction?: IDBTransaction;
+      withJoins?: boolean;
+    },
+  ): Promise<Post | PostWithJoins>;
+  getAll(
+    arg: PostsGetArgs,
+    options?: {
+      transaction?: IDBTransaction;
+      withJoins?: true;
+    },
+  ): Promise<ReadonlyArray<PostWithJoins>>;
+  getAll(
+    arg: PostsGetArgs,
+    options: {
+      transaction?: IDBTransaction;
+      withJoins: false;
+    },
+  ): Promise<ReadonlyArray<Post>>;
+  getAll(
+    arg: PostsGetArgs,
+    options?: {
+      transaction?: IDBTransaction;
+      withJoins?: boolean;
+    },
+  ): Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>>;
+};
 export type MyDatabaseClient = {
-  authors: {
-    add(
-      arg: Omit<Authors, 'id'>,
-      options?: {
-        transaction?: IDBTransaction;
-      },
-    ): Promise<number>;
-    get(
-      arg: AuthorsGetArgs,
-      options?: {
-        transaction?: IDBTransaction;
-      },
-    ): Promise<Authors>;
-    getAll(
-      arg: AuthorsGetArgs,
-      options?: {
-        transaction?: IDBTransaction;
-      },
-    ): Promise<ReadonlyArray<Authors>>;
-  };
-  posts: {
-    add(
-      arg: Post,
-      options?: {
-        transaction?: IDBTransaction;
-      },
-    ): Promise<string>;
-    get(
-      arg: PostsGetArgs,
-      options?: {
-        transaction?: IDBTransaction;
-        withJoins?: true;
-      },
-    ): Promise<PostWithJoins>;
-    get(
-      arg: PostsGetArgs,
-      options: {
-        transaction?: IDBTransaction;
-        withJoins: false;
-      },
-    ): Promise<Post>;
-    get(
-      arg: PostsGetArgs,
-      options?: {
-        transaction?: IDBTransaction;
-        withJoins?: boolean;
-      },
-    ): Promise<Post | PostWithJoins>;
-    getAll(
-      arg: PostsGetArgs,
-      options?: {
-        transaction?: IDBTransaction;
-        withJoins?: true;
-      },
-    ): Promise<ReadonlyArray<PostWithJoins>>;
-    getAll(
-      arg: PostsGetArgs,
-      options: {
-        transaction?: IDBTransaction;
-        withJoins: false;
-      },
-    ): Promise<ReadonlyArray<Post>>;
-    getAll(
-      arg: PostsGetArgs,
-      options?: {
-        transaction?: IDBTransaction;
-        withJoins?: boolean;
-      },
-    ): Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>>;
-  };
+  authors: AuthorsClient;
+  posts: PostsClient;
 };
 function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
-  class AuthorsClient {
+  class AuthorsClientImpl {
     static tablesForTransaction: ReadonlyArray<string> = ['Authors'];
     add(
       arg: AuthorsAddArgs,
@@ -295,8 +297,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
       });
     }
   }
-  const authorsClient = new AuthorsClient();
-  class PostsClient {
+  const authorsClient = new AuthorsClientImpl();
+  class PostsClientImpl {
     static tablesForTransaction: ReadonlyArray<string> = ['Posts', 'Authors'];
     add(
       arg: PostsAddArgs,
@@ -344,8 +346,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             ? db.transaction(
                 Array.from(
                   new Set([
-                    ...AuthorsClient.tablesForTransaction,
-                    ...PostsClient.tablesForTransaction,
+                    ...AuthorsClientImpl.tablesForTransaction,
+                    ...PostsClientImpl.tablesForTransaction,
                   ]),
                 ),
                 'readonly',
@@ -420,8 +422,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             ? db.transaction(
                 Array.from(
                   new Set([
-                    ...AuthorsClient.tablesForTransaction,
-                    ...PostsClient.tablesForTransaction,
+                    ...AuthorsClientImpl.tablesForTransaction,
+                    ...PostsClientImpl.tablesForTransaction,
                   ]),
                 ),
                 'readonly',
@@ -477,7 +479,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
       });
     }
   }
-  const postsClient = new PostsClient();
+  const postsClient = new PostsClientImpl();
   return {
     authors: authorsClient,
     posts: postsClient,

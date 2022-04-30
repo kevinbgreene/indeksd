@@ -4,7 +4,7 @@ import { COMMON_IDENTIFIERS } from '../identifiers';
 import { TableJoin } from '../joins';
 import { createBooleanType, createNumberType } from '../types';
 import { createAddMethodSignature } from './addMethod';
-import { createDatabaseClientName } from './common';
+import { clientTypeNameForTable, createDatabaseClientName } from './common';
 import { createGetMethodSignaturesForTable } from './getMethod';
 
 // function createBaseOptionsTypeDeclaration(
@@ -120,43 +120,46 @@ function createWithJoinsFalsePropertySignature(): ts.PropertySignature {
   );
 }
 
-// export function createOptionsTypeNode(): ts.TypeNode {
-//   const properties: Array<ts.PropertySignature> = [
-//     createTransactionOptionPropertySignature(),
-//   ];
-
-//   return ts.factory.createTypeLiteralNode(properties);
-// }
-
 export function createClientTypeDeclaration(
   database: DatabaseDefinition,
-): ts.TypeAliasDeclaration {
-  return ts.factory.createTypeAliasDeclaration(
-    undefined,
-    [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
-    ts.factory.createIdentifier(createDatabaseClientName(database)),
-    undefined,
-    ts.factory.createTypeLiteralNode(
-      database.body.map((table) => {
-        return ts.factory.createPropertySignature(
-          undefined,
-          ts.factory.createIdentifier(table.name.value.toLowerCase()),
-          undefined,
-          ts.factory.createTypeLiteralNode([
-            createAddMethodSignature(table),
-            ...createGetMethodSignaturesForTable({
-              table,
-              database,
-              methodName: 'get',
-            }),
-            ...createGetMethodSignaturesForTable({
-              table,
-              database,
-              methodName: 'getAll',
-            }),
-          ]),
-        );
-      }),
+): ReadonlyArray<ts.TypeAliasDeclaration> {
+  return [
+    ...database.body.map((table) => {
+      return ts.factory.createTypeAliasDeclaration(
+        undefined,
+        [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
+        ts.factory.createIdentifier(clientTypeNameForTable(table)),
+        undefined,
+        ts.factory.createTypeLiteralNode([
+          createAddMethodSignature(table),
+          ...createGetMethodSignaturesForTable({
+            table,
+            database,
+            methodName: 'get',
+          }),
+          ...createGetMethodSignaturesForTable({
+            table,
+            database,
+            methodName: 'getAll',
+          }),
+        ]),
+      );
+    }),
+    ts.factory.createTypeAliasDeclaration(
+      undefined,
+      [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
+      ts.factory.createIdentifier(createDatabaseClientName(database)),
+      undefined,
+      ts.factory.createTypeLiteralNode(
+        database.body.map((table) => {
+          return ts.factory.createPropertySignature(
+            undefined,
+            ts.factory.createIdentifier(table.name.value.toLowerCase()),
+            undefined,
+            ts.factory.createTypeReferenceNode(clientTypeNameForTable(table)),
+          );
+        }),
+      ),
     ),
-  );
+  ];
 }
