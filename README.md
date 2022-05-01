@@ -201,6 +201,8 @@ const postWithAuthor: PostsWithJoins = db.posts.get({id: 1});
 const postWithoutAuthor: Posts = db.posts.get({id: 1}, {withJoins: false});
 ```
 
+Automated joins only work for `get` operations. In the future I would like to add support to the `add` and `put` operations.
+
 ## Client Operations
 
 Calling the exported `init` function returns our database client. This client currently only supports a subset of IndexedDB features.
@@ -214,3 +216,5 @@ Calling the exported `init` function returns our database client. This client cu
 ### getAll
 
 ### transaction
+
+This is just a wrappter around the built-in `db.transaction` function that provides a bit of typesafety by ensuring you only ask for transactions for tables defined in your schema.
