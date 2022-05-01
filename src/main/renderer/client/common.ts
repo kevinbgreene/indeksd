@@ -41,22 +41,50 @@ export function createOnErrorHandler(
         undefined,
         ts.factory.createBlock(
           [
-            ts.factory.createExpressionStatement(
-              ts.factory.createCallExpression(
-                COMMON_IDENTIFIERS.reject,
-                undefined,
+            ts.factory.createIfStatement(
+              ts.factory.createBinaryExpression(
+                methodName,
+                ts.SyntaxKind.ExclamationEqualsToken,
+                ts.factory.createNull(),
+              ),
+              ts.factory.createBlock(
                 [
-                  ts.factory.createPropertyAccessExpression(
-                    ts.factory.createAsExpression(
-                      methodName,
-                      ts.factory.createTypeReferenceNode(
-                        COMMON_IDENTIFIERS.IDBRequest,
-                        requestTypeArgs,
-                      ),
+                  ts.factory.createExpressionStatement(
+                    ts.factory.createCallExpression(
+                      COMMON_IDENTIFIERS.reject,
+                      undefined,
+                      [
+                        ts.factory.createPropertyAccessExpression(
+                          methodName,
+                          'error',
+                        ),
+                      ],
                     ),
-                    'error',
                   ),
                 ],
+                true,
+              ),
+              ts.factory.createBlock(
+                [
+                  ts.factory.createExpressionStatement(
+                    ts.factory.createCallExpression(
+                      COMMON_IDENTIFIERS.reject,
+                      undefined,
+                      [
+                        ts.factory.createNewExpression(
+                          COMMON_IDENTIFIERS.Error,
+                          undefined,
+                          [
+                            ts.factory.createStringLiteral(
+                              'Unknown error occurred trying to perform operation',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                true,
               ),
             ),
           ],
@@ -85,22 +113,50 @@ export function createOnSuccessHandler(
         undefined,
         ts.factory.createBlock(
           [
-            ts.factory.createExpressionStatement(
-              ts.factory.createCallExpression(
-                COMMON_IDENTIFIERS.resolve,
-                undefined,
+            ts.factory.createIfStatement(
+              ts.factory.createBinaryExpression(
+                methodName,
+                ts.SyntaxKind.ExclamationEqualsToken,
+                ts.factory.createNull(),
+              ),
+              ts.factory.createBlock(
                 [
-                  ts.factory.createPropertyAccessExpression(
-                    ts.factory.createAsExpression(
-                      methodName,
-                      ts.factory.createTypeReferenceNode(
-                        COMMON_IDENTIFIERS.IDBRequest,
-                        requestTypeArgs,
-                      ),
+                  ts.factory.createExpressionStatement(
+                    ts.factory.createCallExpression(
+                      COMMON_IDENTIFIERS.resolve,
+                      undefined,
+                      [
+                        ts.factory.createPropertyAccessExpression(
+                          methodName,
+                          'result',
+                        ),
+                      ],
                     ),
-                    'result',
                   ),
                 ],
+                true,
+              ),
+              ts.factory.createBlock(
+                [
+                  ts.factory.createExpressionStatement(
+                    ts.factory.createCallExpression(
+                      COMMON_IDENTIFIERS.reject,
+                      undefined,
+                      [
+                        ts.factory.createNewExpression(
+                          COMMON_IDENTIFIERS.Error,
+                          undefined,
+                          [
+                            ts.factory.createStringLiteral(
+                              'Operation produced a null result',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                true,
               ),
             ),
           ],

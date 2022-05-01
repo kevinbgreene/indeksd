@@ -217,6 +217,10 @@ export type PostsClient = {
   ): Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>>;
 };
 export type MyDatabaseClient = {
+  transaction: (
+    storeNames: Array<'Authors' | 'Posts'>,
+    mode?: IDBTransactionMode,
+  ) => IDBTransaction;
   authors: AuthorsClient;
   posts: PostsClient;
 };
@@ -235,10 +239,20 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         const store = tx.objectStore('Authors');
         const DBAddRequest: IDBRequest = store.add(arg);
         DBAddRequest.onerror = () => {
-          reject((DBAddRequest as IDBRequest<number>).error);
+          if (DBAddRequest != null) {
+            reject(DBAddRequest.error);
+          } else {
+            reject(
+              new Error('Unknown error occurred trying to perform operation'),
+            );
+          }
         };
         DBAddRequest.onsuccess = () => {
-          resolve((DBAddRequest as IDBRequest<number>).result);
+          if (DBAddRequest != null) {
+            resolve(DBAddRequest.result);
+          } else {
+            reject(new Error('Operation produced a null result'));
+          }
         };
       });
     }
@@ -254,10 +268,20 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         const store = tx.objectStore('Authors');
         const DBPutRequest: IDBRequest = store.put(arg);
         DBPutRequest.onerror = () => {
-          reject((DBPutRequest as IDBRequest<number>).error);
+          if (DBPutRequest != null) {
+            reject(DBPutRequest.error);
+          } else {
+            reject(
+              new Error('Unknown error occurred trying to perform operation'),
+            );
+          }
         };
         DBPutRequest.onsuccess = () => {
-          resolve((DBPutRequest as IDBRequest<number>).result);
+          if (DBPutRequest != null) {
+            resolve(DBPutRequest.result);
+          } else {
+            reject(new Error('Operation produced a null result'));
+          }
         };
       });
     }
@@ -285,10 +309,20 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         }
         if (DBGetRequest != null) {
           DBGetRequest.onerror = () => {
-            reject((DBGetRequest as IDBRequest).error);
+            if (DBGetRequest != null) {
+              reject(DBGetRequest.error);
+            } else {
+              reject(
+                new Error('Unknown error occurred trying to perform operation'),
+              );
+            }
           };
           DBGetRequest.onsuccess = () => {
-            resolve((DBGetRequest as IDBRequest).result);
+            if (DBGetRequest != null && DBGetRequest.result != null) {
+              resolve((DBGetRequest as IDBRequest).result);
+            } else {
+              reject(new Error('No result found for query'));
+            }
           };
         } else {
           reject(new Error('No available index for given query'));
@@ -319,10 +353,20 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         }
         if (DBGetRequest != null) {
           DBGetRequest.onerror = () => {
-            reject((DBGetRequest as IDBRequest).error);
+            if (DBGetRequest != null) {
+              reject(DBGetRequest.error);
+            } else {
+              reject(
+                new Error('Unknown error occurred trying to perform operation'),
+              );
+            }
           };
           DBGetRequest.onsuccess = () => {
-            resolve((DBGetRequest as IDBRequest).result);
+            if (DBGetRequest != null && DBGetRequest.result != null) {
+              resolve((DBGetRequest as IDBRequest).result);
+            } else {
+              reject(new Error('No result found for query'));
+            }
           };
         } else {
           reject(new Error('No available index for given query'));
@@ -345,10 +389,20 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         const store = tx.objectStore('Posts');
         const DBAddRequest: IDBRequest = store.add(arg);
         DBAddRequest.onerror = () => {
-          reject((DBAddRequest as IDBRequest<string>).error);
+          if (DBAddRequest != null) {
+            reject(DBAddRequest.error);
+          } else {
+            reject(
+              new Error('Unknown error occurred trying to perform operation'),
+            );
+          }
         };
         DBAddRequest.onsuccess = () => {
-          resolve((DBAddRequest as IDBRequest<string>).result);
+          if (DBAddRequest != null) {
+            resolve(DBAddRequest.result);
+          } else {
+            reject(new Error('Operation produced a null result'));
+          }
         };
       });
     }
@@ -364,10 +418,20 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         const store = tx.objectStore('Posts');
         const DBPutRequest: IDBRequest = store.put(arg);
         DBPutRequest.onerror = () => {
-          reject((DBPutRequest as IDBRequest<string>).error);
+          if (DBPutRequest != null) {
+            reject(DBPutRequest.error);
+          } else {
+            reject(
+              new Error('Unknown error occurred trying to perform operation'),
+            );
+          }
         };
         DBPutRequest.onsuccess = () => {
-          resolve((DBPutRequest as IDBRequest<string>).result);
+          if (DBPutRequest != null) {
+            resolve(DBPutRequest.result);
+          } else {
+            reject(new Error('Operation produced a null result'));
+          }
         };
       });
     }
@@ -423,10 +487,16 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         }
         if (DBGetRequest != null) {
           DBGetRequest.onerror = () => {
-            reject((DBGetRequest as IDBRequest).error);
+            if (DBGetRequest != null) {
+              reject(DBGetRequest.error);
+            } else {
+              reject(
+                new Error('Unknown error occurred trying to perform operation'),
+              );
+            }
           };
           DBGetRequest.onsuccess = () => {
-            if (DBGetRequest != null) {
+            if (DBGetRequest != null && DBGetRequest.result != null) {
               const post: Post = (DBGetRequest as IDBRequest).result;
               if (options?.withJoins != false) {
                 Promise.all([authorsClient.get(post.author)]).then(
@@ -440,6 +510,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
               } else {
                 resolve(post);
               }
+            } else {
+              reject(new Error('No result found for query'));
             }
           };
         } else {
@@ -499,10 +571,16 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         }
         if (DBGetRequest != null) {
           DBGetRequest.onerror = () => {
-            reject((DBGetRequest as IDBRequest).error);
+            if (DBGetRequest != null) {
+              reject(DBGetRequest.error);
+            } else {
+              reject(
+                new Error('Unknown error occurred trying to perform operation'),
+              );
+            }
           };
           DBGetRequest.onsuccess = () => {
-            if (DBGetRequest != null) {
+            if (DBGetRequest != null && DBGetRequest.result != null) {
               const post: ReadonlyArray<Post> = (DBGetRequest as IDBRequest)
                 .result;
               if (options?.withJoins != false) {
@@ -523,6 +601,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
               } else {
                 resolve(post);
               }
+            } else {
+              reject(new Error('No result found for query'));
             }
           };
         } else {
@@ -533,6 +613,12 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
   }
   const postsClient = new PostsClientImpl();
   return {
+    transaction: (
+      storeNames: Array<'Authors' | 'Posts'>,
+      mode?: IDBTransactionMode,
+    ): IDBTransaction => {
+      return db.transaction(storeNames, mode);
+    },
     authors: authorsClient,
     posts: postsClient,
   };

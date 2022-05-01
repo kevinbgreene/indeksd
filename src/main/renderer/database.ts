@@ -75,7 +75,7 @@ export function renderDatabaseDefinition(
       undefined,
       [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
       undefined,
-      ts.factory.createIdentifier('init'),
+      COMMON_IDENTIFIERS.init,
       undefined,
       [],
       ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [

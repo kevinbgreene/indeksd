@@ -139,8 +139,20 @@ export function createClientTypeDeclaration(
       [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
       ts.factory.createIdentifier(createDatabaseClientName(database)),
       undefined,
-      ts.factory.createTypeLiteralNode(
-        database.body.map((table) => {
+      ts.factory.createTypeLiteralNode([
+        ts.factory.createPropertySignature(
+          undefined,
+          COMMON_IDENTIFIERS.transaction,
+          undefined,
+          ts.factory.createFunctionTypeNode(
+            undefined,
+            createParameterDeclarationsForTransaction(database),
+            ts.factory.createTypeReferenceNode(
+              COMMON_IDENTIFIERS.IDBTransaction,
+            ),
+          ),
+        ),
+        ...database.body.map((table) => {
           return ts.factory.createPropertySignature(
             undefined,
             ts.factory.createIdentifier(table.name.value.toLowerCase()),
@@ -148,7 +160,43 @@ export function createClientTypeDeclaration(
             ts.factory.createTypeReferenceNode(clientTypeNameForTable(table)),
           );
         }),
+      ]),
+    ),
+  ];
+}
+
+export function createParameterDeclarationsForTransaction(
+  database: DatabaseDefinition,
+): ReadonlyArray<ts.ParameterDeclaration> {
+  return [
+    ts.factory.createParameterDeclaration(
+      undefined,
+      undefined,
+      undefined,
+      COMMON_IDENTIFIERS.storeNames,
+      undefined,
+      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Array, [
+        ts.factory.createUnionTypeNode(
+          database.body.map((next) => {
+            return ts.factory.createLiteralTypeNode(
+              ts.factory.createStringLiteral(next.name.value),
+            );
+          }),
+        ),
+      ]),
+      undefined,
+    ),
+    ts.factory.createParameterDeclaration(
+      undefined,
+      undefined,
+      undefined,
+      COMMON_IDENTIFIERS.mode,
+      ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+      ts.factory.createTypeReferenceNode(
+        COMMON_IDENTIFIERS.IDBTransactionMode,
+        [],
       ),
+      undefined,
     ),
   ];
 }

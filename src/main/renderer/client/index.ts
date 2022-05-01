@@ -12,6 +12,7 @@ import {
 } from './common';
 import { createGetMethod } from './getMethod';
 import { createPutMethod } from './putMethod';
+import { createParameterDeclarationsForTransaction } from './type';
 
 export { createClientTypeDeclaration } from './type';
 export { createClientTypeNode } from './common';
@@ -103,12 +104,47 @@ export function createClientFunction(
         }),
         ts.factory.createReturnStatement(
           ts.factory.createObjectLiteralExpression(
-            database.body.map((table) => {
-              return ts.factory.createPropertyAssignment(
-                table.name.value.toLowerCase(),
-                ts.factory.createIdentifier(clientVariableNameForTable(table)),
-              );
-            }),
+            [
+              ts.factory.createPropertyAssignment(
+                COMMON_IDENTIFIERS.transaction,
+                ts.factory.createArrowFunction(
+                  undefined,
+                  undefined,
+                  createParameterDeclarationsForTransaction(database),
+                  ts.factory.createTypeReferenceNode(
+                    COMMON_IDENTIFIERS.IDBTransaction,
+                    undefined,
+                  ),
+                  undefined,
+                  ts.factory.createBlock(
+                    [
+                      ts.factory.createReturnStatement(
+                        ts.factory.createCallExpression(
+                          ts.factory.createPropertyAccessExpression(
+                            COMMON_IDENTIFIERS.db,
+                            COMMON_IDENTIFIERS.transaction,
+                          ),
+                          undefined,
+                          [
+                            COMMON_IDENTIFIERS.storeNames,
+                            COMMON_IDENTIFIERS.mode,
+                          ],
+                        ),
+                      ),
+                    ],
+                    true,
+                  ),
+                ),
+              ),
+              ...database.body.map((table) => {
+                return ts.factory.createPropertyAssignment(
+                  table.name.value.toLowerCase(),
+                  ts.factory.createIdentifier(
+                    clientVariableNameForTable(table),
+                  ),
+                );
+              }),
+            ],
             true,
           ),
         ),
