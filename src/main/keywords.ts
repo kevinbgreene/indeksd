@@ -10,4 +10,7 @@ export const KEYWORDS: KeywordMap = Object.freeze({
   type: 'TypeKeyword',
   true: 'TrueKeyword',
   false: 'FalseKeyword',
+  string: 'StringKeyword',
+  number: 'NumberKeyword',
+  boolean: 'BooleanKeyword',
 });

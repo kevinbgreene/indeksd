@@ -1,49 +1,98 @@
 import * as ts from 'typescript';
 import { COMMON_IDENTIFIERS } from '../identifiers';
-import { DatabaseDefinition, TableDefinition } from '../../parser';
 import {
-  createConstStatement,
-  createLetStatement,
-  createNewPromiseWithBody,
-} from '../helpers';
-import {
-  getAutoIncrementFieldForTable,
-  getPrimaryKeyTypeForTable,
-} from '../keys';
+  DatabaseDefinition,
+  FieldDefinition,
+  TableDefinition,
+} from '../../parser';
+import { createNewPromiseWithBody } from '../helpers';
+import { getPrimaryKeyTypeForTable } from '../keys';
 import { capitalize } from '../utils';
-import { createOnErrorHandler, createOnSuccessHandler } from './common';
+import { createAddRequestHandling, createJoinHandling } from './common';
 import { createGetObjectStore } from './objectStore';
 import { createTransactionWithMode } from './transaction';
 import { createOptionsParameterDeclaration } from './type';
-import { getItemNameForTable } from '../common';
 import { addMethodReturnType, createAddArgsTypeReference } from './addMethod';
+import {
+  getJoinsForTable,
+  TableJoin,
+  typeNodeResolvingPrimaryKeys,
+} from '../joins';
 
-export function createPutArgsTypeName(table: TableDefinition): string {
+export function createPutArgsTypeNameForTable(table: TableDefinition): string {
   return `${capitalize(table.name.value)}PutArgs`;
 }
 
 export function createPutArgsTypeReference(
   table: TableDefinition,
 ): ts.TypeReferenceNode {
-  return ts.factory.createTypeReferenceNode(createPutArgsTypeName(table));
+  return ts.factory.createTypeReferenceNode(
+    createPutArgsTypeNameForTable(table),
+  );
 }
 
-export function createPutArgsTypeNode(table: TableDefinition): ts.TypeNode {
+function joinForField(
+  field: FieldDefinition,
+  joins: ReadonlyArray<TableJoin>,
+): TableJoin | undefined {
+  for (const join of joins) {
+    if (field.name.value == join.fieldName) {
+      return join;
+    }
+  }
+}
+
+export function createPutArgsTypeNode(
+  table: TableDefinition,
+  database: DatabaseDefinition,
+): ts.TypeNode {
+  const fields: Array<ts.TypeElement> = [];
+  const joins = getJoinsForTable(table, database);
+
+  for (const field of table.body) {
+    const fieldJoin = joinForField(field, joins);
+    if (fieldJoin && field.name.value === fieldJoin.fieldName) {
+      fields.push(
+        ts.factory.createPropertySignature(
+          undefined,
+          ts.factory.createIdentifier(field.name.value),
+          undefined,
+          ts.factory.createUnionTypeNode([
+            getPrimaryKeyTypeForTable(fieldJoin.table),
+            ts.factory.createTypeReferenceNode(
+              createPutArgsTypeNameForTable(fieldJoin.table),
+            ),
+          ]),
+        ),
+      );
+    } else {
+      fields.push(
+        ts.factory.createPropertySignature(
+          undefined,
+          ts.factory.createIdentifier(field.name.value),
+          undefined,
+          typeNodeResolvingPrimaryKeys(field.type, database),
+        ),
+      );
+    }
+  }
+
   return ts.factory.createUnionTypeNode([
     createAddArgsTypeReference(table),
-    ts.factory.createTypeReferenceNode(getItemNameForTable(table)),
+    ts.factory.createTypeLiteralNode([...fields]),
   ]);
 }
 
 export function createPutArgsTypeDeclaration(
   table: TableDefinition,
+  database: DatabaseDefinition,
 ): ts.TypeAliasDeclaration {
   return ts.factory.createTypeAliasDeclaration(
     undefined,
     [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
-    ts.factory.createIdentifier(createPutArgsTypeName(table)),
+    ts.factory.createIdentifier(createPutArgsTypeNameForTable(table)),
     [],
-    createPutArgsTypeNode(table),
+    createPutArgsTypeNode(table, database),
   );
 }
 
@@ -56,7 +105,7 @@ export function createArgsParamForPutMethod(
     undefined,
     COMMON_IDENTIFIERS.arg,
     undefined,
-    ts.factory.createTypeReferenceNode(createPutArgsTypeName(table)),
+    ts.factory.createTypeReferenceNode(createPutArgsTypeNameForTable(table)),
   );
 }
 
@@ -83,6 +132,7 @@ export function createPutMethod(
       [
         ts.factory.createReturnStatement(
           createNewPromiseWithBody(
+            ts.factory.createToken(ts.SyntaxKind.AsyncKeyword),
             ts.factory.createBlock(
               [
                 createTransactionWithMode({
@@ -92,7 +142,8 @@ export function createPutMethod(
                   withJoins: false,
                 }),
                 createGetObjectStore(table.name.value),
-                ...createAddRequestHandling(table),
+                ...createJoinHandling(table, database),
+                ...createAddRequestHandling(table, database, 'put'),
               ],
               true,
             ),
@@ -121,33 +172,4 @@ export function createPutMethodSignature(
     ],
     addMethodReturnType(table),
   );
-}
-
-function createAddRequestHandling(
-  table: TableDefinition,
-): ReadonlyArray<ts.Statement> {
-  const autoIncrementField = getAutoIncrementFieldForTable(table);
-  const statements: Array<ts.Statement> = [];
-
-  statements.push(
-    createConstStatement(
-      COMMON_IDENTIFIERS.DBPutRequest,
-      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.IDBRequest),
-      ts.factory.createCallExpression(
-        ts.factory.createPropertyAccessExpression(
-          COMMON_IDENTIFIERS.store,
-          COMMON_IDENTIFIERS.put,
-        ),
-        undefined,
-        [COMMON_IDENTIFIERS.arg],
-      ),
-    ),
-  );
-
-  statements.push(
-    createOnErrorHandler(COMMON_IDENTIFIERS.DBPutRequest),
-    createOnSuccessHandler(COMMON_IDENTIFIERS.DBPutRequest, table),
-  );
-
-  return statements;
 }

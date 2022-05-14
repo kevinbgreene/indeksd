@@ -28,9 +28,9 @@ import { createItemTypeWithJoinsForTable } from './joins';
 import { createPutArgsTypeDeclaration } from './client/putMethod';
 
 export function renderDatabaseDefinition(
-  def: DatabaseDefinition,
+  database: DatabaseDefinition,
 ): ReadonlyArray<ts.Statement> {
-  const version: number = def.annotations.reduce((acc, next) => {
+  const version: number = database.annotations.reduce((acc, next) => {
     if (next.name.value === 'version') {
       if (next.arguments.length === 1) {
         const argument = next.arguments[0];
@@ -54,23 +54,23 @@ export function renderDatabaseDefinition(
   }, 1);
 
   return [
-    ...def.body.flatMap((next) => {
-      return createItemTypeWithJoinsForTable(next, def);
+    ...database.body.flatMap((next) => {
+      return createItemTypeWithJoinsForTable(next, database);
     }),
-    ...def.body.map((next) => {
-      return createAddArgsTypeDeclaration(next);
+    ...database.body.map((next) => {
+      return createAddArgsTypeDeclaration(next, database);
     }),
-    ...def.body.map((next) => {
-      return createPutArgsTypeDeclaration(next);
+    ...database.body.map((next) => {
+      return createPutArgsTypeDeclaration(next, database);
     }),
-    ...def.body.map((next) => {
-      return createGetArgsTypeDeclaration(next, def);
+    ...database.body.map((next) => {
+      return createGetArgsTypeDeclaration(next, database);
     }),
-    ...def.body.flatMap((next) => {
-      return createIndexPredicates(next, def);
+    ...database.body.flatMap((next) => {
+      return createIndexPredicates(next, database);
     }),
-    ...createClientTypeDeclaration(def),
-    createClientFunction(def),
+    ...createClientTypeDeclaration(database),
+    createClientFunction(database),
     ts.factory.createFunctionDeclaration(
       undefined,
       [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
@@ -79,12 +79,13 @@ export function renderDatabaseDefinition(
       undefined,
       [],
       ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
-        createClientTypeNode(def),
+        createClientTypeNode(database),
       ]),
       ts.factory.createBlock(
         [
           ts.factory.createReturnStatement(
             createNewPromiseWithBody(
+              undefined,
               ts.factory.createBlock(
                 [
                   createConstStatement(
@@ -100,7 +101,7 @@ export function renderDatabaseDefinition(
                       ),
                       undefined,
                       [
-                        ts.factory.createStringLiteral(def.name.value),
+                        ts.factory.createStringLiteral(database.name.value),
                         ts.factory.createNumericLiteral(version),
                       ],
                     ),
@@ -112,7 +113,7 @@ export function renderDatabaseDefinition(
                         undefined,
                         [
                           ts.factory.createStringLiteral(
-                            `Error opening database: ${def.name.value}`,
+                            `Error opening database: ${database.name.value}`,
                           ),
                         ],
                       ),
@@ -124,8 +125,8 @@ export function renderDatabaseDefinition(
                   ]),
                   createEventHandler('onupgradeneeded', [
                     createDbAssignment(),
-                    ...createObjectStores(def),
-                    ...createObjectStoreIndexes(def),
+                    ...createObjectStores(database),
+                    ...createObjectStoreIndexes(database),
                   ]),
                 ],
                 true,

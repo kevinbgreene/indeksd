@@ -1,10 +1,13 @@
 import * as ts from 'typescript';
 import { COMMON_IDENTIFIERS } from './identifiers';
 
-export function createNewPromiseWithBody(body: ts.Block): ts.NewExpression {
+export function createNewPromiseWithBody(
+  modifier: ts.ModifierToken<ts.SyntaxKind.AsyncKeyword> | undefined,
+  body: ts.Block,
+): ts.NewExpression {
   return ts.factory.createNewExpression(COMMON_IDENTIFIERS.Promise, undefined, [
     ts.factory.createArrowFunction(
-      undefined,
+      modifier != undefined ? [modifier] : undefined,
       undefined,
       [
         createParameterDeclaration(COMMON_IDENTIFIERS.resolve),

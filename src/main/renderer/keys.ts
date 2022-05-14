@@ -10,6 +10,13 @@ import { typeForTypeNode } from './types';
 
 export type IndexKind = 'autoincrement' | 'key' | 'index';
 
+const PRIMARY_KEY_ANNOTATIONS = ['autoincrement', 'key'];
+
+const INDEX_ANNOTATIONS: ReadonlyArray<string> = [
+  ...PRIMARY_KEY_ANNOTATIONS,
+  'index',
+];
+
 export function doAnnotationsInclude(
   annotations: ReadonlyArray<Annotation>,
   names: ReadonlyArray<string>,
@@ -29,12 +36,6 @@ export function annotationsFromList(
 
   return null;
 }
-
-const INDEX_ANNOTATIONS: ReadonlyArray<string> = [
-  'autoincrement',
-  'key',
-  'index',
-];
 
 function isIndexAnnotation(arg: string): arg is IndexKind {
   return INDEX_ANNOTATIONS.includes(arg);
@@ -191,7 +192,7 @@ export function getPrimaryKeyFieldForTable(
   def: TableDefinition,
 ): FieldDefinition {
   const keys = def.body.filter((field) => {
-    return annotationsFromList(field.annotations, ['autoincrement', 'key']);
+    return annotationsFromList(field.annotations, PRIMARY_KEY_ANNOTATIONS);
   });
 
   if (keys.length > 1) {
@@ -220,7 +221,24 @@ export function getAnnotationsByName(
   });
 }
 
-export function getPrimaryKeyTypeForTable(def: TableDefinition): ts.TypeNode {
-  const keyField = getPrimaryKeyFieldForTable(def);
+export function getPrimaryKeyTypeForTable(table: TableDefinition): ts.TypeNode {
+  const keyField = getPrimaryKeyFieldForTable(table);
   return typeForTypeNode(keyField.type);
+}
+
+export function getPrimaryKeyTypeForTableAsString(
+  table: TableDefinition,
+): string {
+  const keyField = getPrimaryKeyFieldForTable(table);
+
+  switch (keyField.type.kind) {
+    case 'StringKeyword':
+      return 'string';
+    case 'NumberKeyword':
+      return 'number';
+    default:
+      throw new Error(
+        `Primary key for table must be "string" or "number". Found ${keyField.type.kind} for field ${keyField.name.value}`,
+      );
+  }
 }

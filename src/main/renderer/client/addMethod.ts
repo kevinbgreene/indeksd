@@ -1,17 +1,27 @@
 import * as ts from 'typescript';
 import { COMMON_IDENTIFIERS } from '../identifiers';
-import { DatabaseDefinition, TableDefinition } from '../../parser';
-import { createConstStatement, createNewPromiseWithBody } from '../helpers';
+import {
+  DatabaseDefinition,
+  FieldDefinition,
+  TableDefinition,
+} from '../../parser';
+import { createNewPromiseWithBody } from '../helpers';
 import {
   getAutoIncrementFieldForTable,
   getPrimaryKeyTypeForTable,
 } from '../keys';
 import { capitalize } from '../utils';
-import { createOnErrorHandler, createOnSuccessHandler } from './common';
+import { createAddRequestHandling, createJoinHandling } from './common';
 import { createGetObjectStore } from './objectStore';
 import { createTransactionWithMode } from './transaction';
 import { createOptionsParameterDeclaration } from './type';
 import { getItemNameForTable } from '../common';
+import {
+  getJoinsForTable,
+  TableJoin,
+  typeNodeResolvingPrimaryKeys,
+} from '../joins';
+import { createPutArgsTypeNameForTable } from './putMethod';
 
 export function addMethodReturnType(table: TableDefinition): ts.TypeNode {
   return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
@@ -29,33 +39,79 @@ export function createAddArgsTypeReference(
   return ts.factory.createTypeReferenceNode(createAddArgsTypeName(table));
 }
 
-export function createAddArgsTypeNode(table: TableDefinition): ts.TypeNode {
+function joinForField(
+  field: FieldDefinition,
+  joins: ReadonlyArray<TableJoin>,
+): TableJoin | undefined {
+  for (const join of joins) {
+    if (field.name.value == join.fieldName) {
+      return join;
+    }
+  }
+}
+
+export function createAddArgsTypeNode(
+  table: TableDefinition,
+  database: DatabaseDefinition,
+): ts.TypeNode {
   const autoIncrementField = getAutoIncrementFieldForTable(table);
   const typeReferencNode = ts.factory.createTypeReferenceNode(
     getItemNameForTable(table),
   );
 
-  if (autoIncrementField != null) {
-    return ts.factory.createTypeReferenceNode('Omit', [
-      typeReferencNode,
-      ts.factory.createLiteralTypeNode(
-        ts.factory.createStringLiteral(autoIncrementField.name.value),
-      ),
-    ]);
+  const fields: Array<ts.TypeElement> = [];
+  const joins = getJoinsForTable(table, database);
+
+  for (const field of table.body) {
+    if (
+      autoIncrementField != null &&
+      field.name.value === autoIncrementField.name.value
+    ) {
+      continue;
+    } else {
+      const fieldJoin = joinForField(field, joins);
+      if (fieldJoin == null) {
+        fields.push(
+          ts.factory.createPropertySignature(
+            undefined,
+            ts.factory.createIdentifier(field.name.value),
+            undefined,
+            typeNodeResolvingPrimaryKeys(field.type, database),
+          ),
+        );
+      } else {
+        fields.push(
+          ts.factory.createPropertySignature(
+            undefined,
+            ts.factory.createIdentifier(field.name.value),
+            undefined,
+            ts.factory.createUnionTypeNode([
+              getPrimaryKeyTypeForTable(fieldJoin.table),
+              ts.factory.createTypeReferenceNode(
+                createPutArgsTypeNameForTable(fieldJoin.table),
+              ),
+            ]),
+          ),
+        );
+      }
+    }
   }
 
-  return typeReferencNode;
+  return ts.factory.createUnionTypeNode([
+    ts.factory.createTypeLiteralNode([...fields]),
+  ]);
 }
 
 export function createAddArgsTypeDeclaration(
   table: TableDefinition,
+  database: DatabaseDefinition,
 ): ts.TypeAliasDeclaration {
   return ts.factory.createTypeAliasDeclaration(
     undefined,
     [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
     ts.factory.createIdentifier(createAddArgsTypeName(table)),
     [],
-    createAddArgsTypeNode(table),
+    createAddArgsTypeNode(table, database),
   );
 }
 
@@ -102,6 +158,7 @@ export function createAddMethod(
       [
         ts.factory.createReturnStatement(
           createNewPromiseWithBody(
+            ts.factory.createToken(ts.SyntaxKind.AsyncKeyword),
             ts.factory.createBlock(
               [
                 createTransactionWithMode({
@@ -111,7 +168,8 @@ export function createAddMethod(
                   withJoins: false,
                 }),
                 createGetObjectStore(table.name.value),
-                ...createAddRequestHandling(table),
+                ...createJoinHandling(table, database),
+                ...createAddRequestHandling(table, database, 'add'),
               ],
               true,
             ),
@@ -140,25 +198,4 @@ export function createAddMethodSignature(
     ],
     addMethodReturnType(table),
   );
-}
-
-function createAddRequestHandling(
-  table: TableDefinition,
-): ReadonlyArray<ts.Statement> {
-  return [
-    createConstStatement(
-      COMMON_IDENTIFIERS.DBAddRequest,
-      ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.IDBRequest),
-      ts.factory.createCallExpression(
-        ts.factory.createPropertyAccessExpression(
-          COMMON_IDENTIFIERS.store,
-          COMMON_IDENTIFIERS.add,
-        ),
-        undefined,
-        [COMMON_IDENTIFIERS.arg],
-      ),
-    ),
-    createOnErrorHandler(COMMON_IDENTIFIERS.DBAddRequest),
-    createOnSuccessHandler(COMMON_IDENTIFIERS.DBAddRequest, table),
-  ];
 }

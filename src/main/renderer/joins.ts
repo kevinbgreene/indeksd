@@ -34,19 +34,19 @@ export function getJoinsForTable(
 }
 
 export function createItemTypeWithJoinsForTable(
-  def: TableDefinition,
+  table: TableDefinition,
   database: DatabaseDefinition,
 ): ReadonlyArray<ts.TypeAliasDeclaration> {
-  const joins = getJoinsForTable(def, database);
+  const joins = getJoinsForTable(table, database);
 
   const typeAliases = [
     ts.factory.createTypeAliasDeclaration(
       undefined,
       [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
-      getItemNameForTable(def),
+      getItemNameForTable(table),
       undefined,
       ts.factory.createTypeLiteralNode(
-        def.body.map((next) => {
+        table.body.map((next) => {
           return ts.factory.createPropertySignature(
             undefined,
             ts.factory.createIdentifier(next.name.value),
@@ -63,10 +63,10 @@ export function createItemTypeWithJoinsForTable(
       ts.factory.createTypeAliasDeclaration(
         undefined,
         [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
-        ts.factory.createIdentifier(getItemNameWithJoinsForTable(def)),
+        ts.factory.createIdentifier(getItemNameWithJoinsForTable(table)),
         undefined,
         ts.factory.createTypeLiteralNode(
-          def.body.map((next) => {
+          table.body.map((next) => {
             return ts.factory.createPropertySignature(
               undefined,
               ts.factory.createIdentifier(next.name.value),

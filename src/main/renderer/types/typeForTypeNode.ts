@@ -3,6 +3,7 @@ import { TypeNode } from '../../parser';
 import {
   createBooleanLiteral,
   createBooleanType,
+  createNumberType,
   createStringType,
 } from './baseTypes';
 import { createRangeType } from './rangeTypes';
@@ -44,7 +45,7 @@ export function typeForTypeNode(typeNode: TypeNode): ts.TypeNode {
       return createBooleanType();
 
     case 'NumberKeyword':
-      return createBooleanType();
+      return createNumberType();
 
     case 'StringLiteral':
       return ts.factory.createLiteralTypeNode(

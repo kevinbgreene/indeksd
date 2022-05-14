@@ -3,6 +3,7 @@ import * as ts from 'typescript';
 export const COMMON_IDENTIFIERS = {
   arg: ts.factory.createIdentifier('arg'),
   add: ts.factory.createIdentifier('add'),
+  error: ts.factory.createIdentifier('error'),
   get: ts.factory.createIdentifier('get'),
   getAll: ts.factory.createIdentifier('getAll'),
   put: ts.factory.createIdentifier('put'),

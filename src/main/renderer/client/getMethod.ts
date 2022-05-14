@@ -359,6 +359,7 @@ export function createGetMethod({
       [
         ts.factory.createReturnStatement(
           createNewPromiseWithBody(
+            undefined,
             ts.factory.createBlock(
               [
                 createTransactionWithMode({
