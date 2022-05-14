@@ -13,9 +13,9 @@ import { createTransactionWithMode } from './transaction';
 import { createOptionsParameterDeclaration } from './type';
 import { getItemNameForTable } from '../common';
 
-function addMethodReturnType(table: TableDefinition): ts.TypeNode {
+export function addMethodReturnType(table: TableDefinition): ts.TypeNode {
   return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
-    getPrimaryKeyTypeForTable(table),
+    ts.factory.createTypeReferenceNode(getItemNameForTable(table)),
   ]);
 }
 
@@ -158,11 +158,7 @@ function createAddRequestHandling(
         [COMMON_IDENTIFIERS.arg],
       ),
     ),
-    createOnErrorHandler(COMMON_IDENTIFIERS.DBAddRequest, [
-      getPrimaryKeyTypeForTable(table),
-    ]),
-    createOnSuccessHandler(COMMON_IDENTIFIERS.DBAddRequest, [
-      getPrimaryKeyTypeForTable(table),
-    ]),
+    createOnErrorHandler(COMMON_IDENTIFIERS.DBAddRequest),
+    createOnSuccessHandler(COMMON_IDENTIFIERS.DBAddRequest, table),
   ];
 }

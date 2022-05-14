@@ -16,13 +16,7 @@ import { createGetObjectStore } from './objectStore';
 import { createTransactionWithMode } from './transaction';
 import { createOptionsParameterDeclaration } from './type';
 import { getItemNameForTable } from '../common';
-import { createAddArgsTypeReference } from './addMethod';
-
-function putMethodReturnType(table: TableDefinition): ts.TypeNode {
-  return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
-    getPrimaryKeyTypeForTable(table),
-  ]);
-}
+import { addMethodReturnType, createAddArgsTypeReference } from './addMethod';
 
 export function createPutArgsTypeName(table: TableDefinition): string {
   return `${capitalize(table.name.value)}PutArgs`;
@@ -84,7 +78,7 @@ export function createPutMethod(
         includes: ['transaction'],
       }),
     ],
-    putMethodReturnType(table),
+    addMethodReturnType(table),
     ts.factory.createBlock(
       [
         ts.factory.createReturnStatement(
@@ -125,7 +119,7 @@ export function createPutMethodSignature(
         includes: ['transaction'],
       }),
     ],
-    putMethodReturnType(table),
+    addMethodReturnType(table),
   );
 }
 
@@ -151,12 +145,8 @@ function createAddRequestHandling(
   );
 
   statements.push(
-    createOnErrorHandler(COMMON_IDENTIFIERS.DBPutRequest, [
-      getPrimaryKeyTypeForTable(table),
-    ]),
-    createOnSuccessHandler(COMMON_IDENTIFIERS.DBPutRequest, [
-      getPrimaryKeyTypeForTable(table),
-    ]),
+    createOnErrorHandler(COMMON_IDENTIFIERS.DBPutRequest),
+    createOnSuccessHandler(COMMON_IDENTIFIERS.DBPutRequest, table),
   );
 
   return statements;

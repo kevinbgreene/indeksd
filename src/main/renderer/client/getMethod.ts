@@ -599,7 +599,7 @@ export function createIndexNarrowing({
       ),
       ts.factory.createBlock(
         [
-          createOnErrorHandler(COMMON_IDENTIFIERS.DBGetRequest, []),
+          createOnErrorHandler(COMMON_IDENTIFIERS.DBGetRequest),
           createOnSuccessHandler(table, database, methodName),
         ],
         true,

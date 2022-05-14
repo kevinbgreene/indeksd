@@ -2,6 +2,7 @@ import * as ts from 'typescript';
 import { COMMON_IDENTIFIERS } from '../identifiers';
 import { DatabaseDefinition, TableDefinition } from '../../parser';
 import { capitalize } from '../utils';
+import { getPrimaryKeyFieldForTable } from '../keys';
 
 export function clientTypeNameForTable(def: TableDefinition): string {
   return `${capitalize(def.name.value)}Client`;
@@ -23,10 +24,7 @@ export function createClientTypeNode(def: DatabaseDefinition): ts.TypeNode {
   return ts.factory.createTypeReferenceNode(createDatabaseClientName(def));
 }
 
-export function createOnErrorHandler(
-  methodName: ts.Identifier,
-  requestTypeArgs: ReadonlyArray<ts.TypeNode>,
-): ts.Statement {
+export function createOnErrorHandler(methodName: ts.Identifier): ts.Statement {
   return ts.factory.createExpressionStatement(
     ts.factory.createAssignment(
       ts.factory.createPropertyAccessExpression(
@@ -97,8 +95,10 @@ export function createOnErrorHandler(
 
 export function createOnSuccessHandler(
   methodName: ts.Identifier,
-  requestTypeArgs: ReadonlyArray<ts.TypeNode> = [],
+  table: TableDefinition,
 ): ts.Statement {
+  const primaryKeyField = getPrimaryKeyFieldForTable(table);
+
   return ts.factory.createExpressionStatement(
     ts.factory.createAssignment(
       ts.factory.createPropertyAccessExpression(
@@ -126,9 +126,20 @@ export function createOnSuccessHandler(
                       COMMON_IDENTIFIERS.resolve,
                       undefined,
                       [
-                        ts.factory.createPropertyAccessExpression(
-                          methodName,
-                          'result',
+                        ts.factory.createObjectLiteralExpression(
+                          [
+                            ts.factory.createSpreadAssignment(
+                              COMMON_IDENTIFIERS.arg,
+                            ),
+                            ts.factory.createPropertyAssignment(
+                              primaryKeyField.name.value,
+                              ts.factory.createPropertyAccessExpression(
+                                methodName,
+                                'result',
+                              ),
+                            ),
+                          ],
+                          true,
                         ),
                       ],
                     ),
