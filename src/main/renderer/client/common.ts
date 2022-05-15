@@ -324,7 +324,7 @@ function createNullHandlingForTableJoin(join: TableJoin): ts.Statement {
                 undefined,
                 [
                   ts.factory.createStringLiteral(
-                    `An unknown error occurred while trying to join table: ${join.table.name.value}`,
+                    `Unknown error occurred while trying to join table: ${join.table.name.value}`,
                   ),
                 ],
               ),
