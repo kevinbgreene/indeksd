@@ -25,12 +25,16 @@ import {
 } from '../joins';
 import { getItemNameForTable } from '../common';
 
-export function createGetArgsTypeName(def: TableDefinition): string {
-  return `${capitalize(def.name.value)}GetArgs`;
+export function createGetArgsTypeName(table: TableDefinition): string {
+  return `${capitalize(table.name.value)}GetArgs`;
 }
 
-export function createGetArgsTypeNode(def: TableDefinition): ts.TypeNode {
-  return ts.factory.createTypeReferenceNode(createGetArgsTypeName(def));
+export function createGetAllArgsTypeName(table: TableDefinition): string {
+  return `${capitalize(table.name.value)}GetAllArgs`;
+}
+
+export function createGetArgsTypeNode(table: TableDefinition): ts.TypeNode {
+  return ts.factory.createTypeReferenceNode(createGetArgsTypeName(table));
 }
 
 function createItemTypeNodeForTable({
@@ -111,7 +115,10 @@ export function createGetMethodSignaturesForTable({
         undefined,
         undefined,
         [
-          createArgsParamForGetMethod(table),
+          createArgParamDeclaration(
+            methodName === 'get',
+            ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+          ),
           createOptionsParamForGetMethod({ withJoins: 'true' }),
         ],
         createGetMethodReturnTypeForTable({
@@ -127,7 +134,21 @@ export function createGetMethodSignaturesForTable({
         undefined,
         undefined,
         [
-          createArgsParamForGetMethod(table),
+          createArgParamDeclaration(
+            true,
+            methodName === 'getAll'
+              ? ts.factory.createUnionTypeNode([
+                  ts.factory.createTypeReferenceNode(
+                    createGetArgsTypeName(table),
+                  ),
+                  ts.factory.createTypeReferenceNode(
+                    COMMON_IDENTIFIERS.undefined,
+                  ),
+                ])
+              : ts.factory.createTypeReferenceNode(
+                  createGetArgsTypeName(table),
+                ),
+          ),
           createOptionsParamForGetMethod({ withJoins: 'false' }),
         ],
         createGetMethodReturnTypeForTable({
@@ -143,7 +164,10 @@ export function createGetMethodSignaturesForTable({
         undefined,
         undefined,
         [
-          createArgsParamForGetMethod(table),
+          createArgParamDeclaration(
+            methodName === 'get',
+            ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+          ),
           createOptionsParamForGetMethod({ withJoins: 'default' }),
         ],
         createGetMethodReturnTypeForTable({
@@ -162,7 +186,10 @@ export function createGetMethodSignaturesForTable({
         undefined,
         undefined,
         [
-          createArgsParamForGetMethod(table),
+          createArgParamDeclaration(
+            methodName === 'get',
+            ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+          ),
           createOptionsParamForGetMethod({ withJoins: 'none' }),
         ],
         createGetMethodReturnTypeForTable({
@@ -205,16 +232,19 @@ function createOptionsParamForGetMethod({
   }
 }
 
-export function createArgsParamForGetMethod(
-  table: TableDefinition,
+export function createArgParamDeclaration(
+  isRequired: boolean,
+  typeNode: ts.TypeNode,
 ): ts.ParameterDeclaration {
   return ts.factory.createParameterDeclaration(
     undefined,
     undefined,
     undefined,
     COMMON_IDENTIFIERS.arg,
-    undefined,
-    ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+    isRequired
+      ? undefined
+      : ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+    typeNode,
   );
 }
 
@@ -267,7 +297,10 @@ export function createGetMethodDeclarations({
         undefined,
         undefined,
         [
-          createArgsParamForGetMethod(table),
+          createArgParamDeclaration(
+            methodName === 'get',
+            ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+          ),
           createOptionsParamForGetMethod({ withJoins: 'true' }),
         ],
         createGetMethodReturnTypeForTable({
@@ -286,7 +319,21 @@ export function createGetMethodDeclarations({
         undefined,
         undefined,
         [
-          createArgsParamForGetMethod(table),
+          createArgParamDeclaration(
+            true,
+            methodName === 'getAll'
+              ? ts.factory.createUnionTypeNode([
+                  ts.factory.createTypeReferenceNode(
+                    createGetArgsTypeName(table),
+                  ),
+                  ts.factory.createTypeReferenceNode(
+                    COMMON_IDENTIFIERS.undefined,
+                  ),
+                ])
+              : ts.factory.createTypeReferenceNode(
+                  createGetArgsTypeName(table),
+                ),
+          ),
           createOptionsParamForGetMethod({ withJoins: 'false' }),
         ],
         createGetMethodReturnTypeForTable({
@@ -305,7 +352,10 @@ export function createGetMethodDeclarations({
         undefined,
         undefined,
         [
-          createArgsParamForGetMethod(table),
+          createArgParamDeclaration(
+            methodName === 'get',
+            ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+          ),
           createOptionsParamForGetMethod({ withJoins: 'default' }),
         ],
         createGetMethodReturnTypeForTable({
@@ -327,7 +377,10 @@ export function createGetMethodDeclarations({
         undefined,
         undefined,
         [
-          createArgsParamForGetMethod(table),
+          createArgParamDeclaration(
+            methodName === 'get',
+            ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+          ),
           createOptionsParamForGetMethod({ withJoins: 'none' }),
         ],
         createGetMethodReturnTypeForTable({
@@ -651,10 +704,10 @@ function normalizeName(name: string): string {
 }
 
 function createPredicateNameForIndex(
-  def: TableDefinition,
+  table: TableDefinition,
   index: TableIndex,
 ): string {
-  return `is${capitalize(def.name.value)}${normalizeName(index.name)}Index`;
+  return `is${capitalize(table.name.value)}${normalizeName(index.name)}Index`;
 }
 
 export function createIndexPredicates(
@@ -680,7 +733,7 @@ export function createIndexPredicates(
             undefined,
             undefined,
             COMMON_IDENTIFIERS.arg,
-            undefined,
+            ts.factory.createToken(ts.SyntaxKind.QuestionToken),
             createGetArgsTypeNode(table),
             undefined,
           ),
@@ -802,21 +855,33 @@ function typeNodesForIndexResolvingPrimaryKeys(
 export function createGetArgsTypeDeclaration(
   table: TableDefinition,
   database: DatabaseDefinition,
-): ts.TypeAliasDeclaration {
+): Array<ts.TypeAliasDeclaration> {
   const indexes = Object.values(getIndexesForTable(table))
     .flat()
     .filter((next): next is TableIndex => next != null);
-  return ts.factory.createTypeAliasDeclaration(
-    undefined,
-    [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
-    ts.factory.createIdentifier(createGetArgsTypeName(table)),
-    [],
-    ts.factory.createUnionTypeNode(
-      indexes.flatMap((next) => {
-        return typeNodesForIndexResolvingPrimaryKeys(next, database);
-      }),
+  return [
+    ts.factory.createTypeAliasDeclaration(
+      undefined,
+      [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
+      ts.factory.createIdentifier(createGetArgsTypeName(table)),
+      [],
+      ts.factory.createUnionTypeNode(
+        indexes.flatMap((next) => {
+          return typeNodesForIndexResolvingPrimaryKeys(next, database);
+        }),
+      ),
     ),
-  );
+    ts.factory.createTypeAliasDeclaration(
+      undefined,
+      [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
+      ts.factory.createIdentifier(createGetAllArgsTypeName(table)),
+      [],
+      ts.factory.createUnionTypeNode([
+        createGetArgsTypeNode(table),
+        ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.undefined),
+      ]),
+    ),
+  ];
 }
 
 export function createOnSuccessHandler(

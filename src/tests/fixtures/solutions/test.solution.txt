@@ -175,7 +175,7 @@ export type AuthorsClient = {
     },
   ): Promise<Authors>;
   getAll(
-    arg: AuthorsGetArgs,
+    arg?: AuthorsGetArgs,
     options?: {
       transaction?: IDBTransaction;
     },
@@ -216,21 +216,21 @@ export type PostsClient = {
     },
   ): Promise<Post | PostWithJoins>;
   getAll(
-    arg: PostsGetArgs,
+    arg?: PostsGetArgs,
     options?: {
       transaction?: IDBTransaction;
       withJoins?: true;
     },
   ): Promise<ReadonlyArray<PostWithJoins>>;
   getAll(
-    arg: PostsGetArgs,
+    arg?: PostsGetArgs,
     options: {
       transaction?: IDBTransaction;
       withJoins: false;
     },
   ): Promise<ReadonlyArray<Post>>;
   getAll(
-    arg: PostsGetArgs,
+    arg?: PostsGetArgs,
     options?: {
       transaction?: IDBTransaction;
       withJoins?: boolean;
@@ -363,7 +363,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
       });
     }
     getAll(
-      arg: AuthorsGetArgs,
+      arg?: AuthorsGetArgs,
       options?: {
         transaction?: IDBTransaction;
       },
@@ -629,21 +629,21 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
       });
     }
     getAll(
-      arg: PostsGetArgs,
+      arg?: PostsGetArgs,
       options?: {
         transaction?: IDBTransaction;
         withJoins?: true;
       },
     ): Promise<ReadonlyArray<PostWithJoins>>;
     getAll(
-      arg: PostsGetArgs,
+      arg?: PostsGetArgs,
       options: {
         transaction?: IDBTransaction;
         withJoins: false;
       },
     ): Promise<ReadonlyArray<Post>>;
     getAll(
-      arg: PostsGetArgs,
+      arg?: PostsGetArgs,
       options?: {
         transaction?: IDBTransaction;
         withJoins?: boolean;

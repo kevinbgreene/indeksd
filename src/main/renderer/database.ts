@@ -63,7 +63,7 @@ export function renderDatabaseDefinition(
     ...database.body.map((next) => {
       return createPutArgsTypeDeclaration(next, database);
     }),
-    ...database.body.map((next) => {
+    ...database.body.flatMap((next) => {
       return createGetArgsTypeDeclaration(next, database);
     }),
     ...database.body.flatMap((next) => {
