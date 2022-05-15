@@ -158,6 +158,10 @@ export function createScanner(src: string) {
         addToken('GreaterThanToken', next);
         break;
 
+      case '?':
+        addToken('QuestionToken', next);
+        break;
+
       case '.':
         if (peek() === '.') {
           advance();

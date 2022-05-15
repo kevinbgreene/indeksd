@@ -8,11 +8,7 @@ import {
   getPrimaryKeyTypeForTableAsString,
 } from '../keys';
 import { getJoinsForTable, TableJoin } from '../joins';
-import {
-  createConstStatement,
-  createLetStatement,
-  createNewPromiseWithBody,
-} from '../helpers';
+import { createConstStatement } from '../helpers';
 
 export function clientTypeNameForTable(def: TableDefinition): string {
   return `${capitalize(def.name.value)}Client`;

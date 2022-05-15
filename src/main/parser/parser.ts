@@ -169,7 +169,7 @@ export function createParser(tokens: Array<Token>): Parser {
     const _openBrace: Token | null = consume('LeftBraceToken');
     requireValue(_openBrace, `Expected opening curly brace`);
 
-    const fields: Array<FieldDefinition> = parseFields();
+    const fields: Array<FieldDefinition> = parseFieldDefinitions();
 
     const _closeBrace: Token | null = consume('RightBraceToken');
     const closeBrace = requireValue(
@@ -308,11 +308,11 @@ export function createParser(tokens: Array<Token>): Parser {
     return args;
   }
 
-  function parseFields(): Array<FieldDefinition> {
+  function parseFieldDefinitions(): Array<FieldDefinition> {
     const fields: Array<FieldDefinition> = [];
 
     while (!check('RightBraceToken')) {
-      fields.push(parseField());
+      fields.push(parseFieldDefinition());
 
       if (isStartOfDefinition(currentToken())) {
         throw reportError(
@@ -329,7 +329,7 @@ export function createParser(tokens: Array<Token>): Parser {
   }
 
   // Field → ?Annotation Identifier ':' TypeNode ';'
-  function parseField(): FieldDefinition {
+  function parseFieldDefinition(): FieldDefinition {
     const startLoc: TextLocation = currentToken().loc;
     const annotations: ReadonlyArray<Annotation> = parseAnnotations();
     const _nameToken: Token | null = consume('Identifier');
@@ -337,6 +337,9 @@ export function createParser(tokens: Array<Token>): Parser {
       _nameToken,
       `Unable to find identifier for field`,
     );
+
+    const questionToken: Token | null = consume('QuestionToken');
+    const required: boolean = questionToken == null;
 
     const colonToken: Token | null = consume('ColonToken');
     requireValue(colonToken, 'Type annotation expected for field');
@@ -357,6 +360,7 @@ export function createParser(tokens: Array<Token>): Parser {
 
     return factory.createFieldDefinition(
       factory.createIdentifier(nameToken.text, nameToken.loc),
+      required,
       annotations,
       type,
       location,

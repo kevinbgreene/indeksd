@@ -75,7 +75,9 @@ export function createAddArgsTypeNode(
           ts.factory.createPropertySignature(
             undefined,
             ts.factory.createIdentifier(field.name.value),
-            undefined,
+            field.required
+              ? undefined
+              : ts.factory.createToken(ts.SyntaxKind.QuestionToken),
             typeNodeResolvingPrimaryKeys(field.type, database),
           ),
         );
@@ -84,7 +86,9 @@ export function createAddArgsTypeNode(
           ts.factory.createPropertySignature(
             undefined,
             ts.factory.createIdentifier(field.name.value),
-            undefined,
+            field.required
+              ? undefined
+              : ts.factory.createToken(ts.SyntaxKind.QuestionToken),
             ts.factory.createUnionTypeNode([
               getPrimaryKeyTypeForTable(fieldJoin.table),
               ts.factory.createTypeReferenceNode(

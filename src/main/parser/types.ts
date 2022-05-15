@@ -108,6 +108,7 @@ export interface FieldDefinition extends SyntaxNode {
   kind: 'FieldDefinition';
   annotations: Annotations;
   name: Identifier;
+  required: boolean;
   type: TypeNode;
 }
 
@@ -199,7 +200,8 @@ export type CharacterToken =
   | 'AtToken'
   | 'PipeToken'
   | 'EqualToken'
-  | 'DotDotToken';
+  | 'DotDotToken'
+  | 'QuestionToken';
 
 export type EndOfFile = 'EOF';
 

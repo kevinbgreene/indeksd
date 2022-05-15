@@ -100,6 +100,7 @@ export function createAnnotation(
 
 export function createFieldDefinition(
   name: Identifier,
+  required: boolean,
   annotations: ReadonlyArray<Annotation>,
   type: TypeNode,
   location: TextLocation,
@@ -107,6 +108,7 @@ export function createFieldDefinition(
   return {
     kind: 'FieldDefinition',
     name,
+    required,
     annotations,
     type,
     loc: location,

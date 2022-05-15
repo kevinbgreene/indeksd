@@ -16,13 +16,13 @@ export type Authors = {
 export type Post = {
   postId: string;
   name: string;
-  content: string;
+  content?: string;
   author: number;
 };
 export type PostWithJoins = {
   postId: string;
   name: string;
-  content: string;
+  content?: string;
   author: Authors;
 };
 export type AuthorsAddArgs = {
@@ -32,7 +32,7 @@ export type AuthorsAddArgs = {
 export type PostsAddArgs = {
   postId: string;
   name: string;
-  content: string;
+  content?: string;
   author: number | AuthorsPutArgs;
 };
 export type AuthorsPutArgs =
@@ -47,7 +47,7 @@ export type PostsPutArgs =
   | {
       postId: string;
       name: string;
-      content: string;
+      content?: string;
       author: number | AuthorsPutArgs;
     };
 export type AuthorsGetArgs =
@@ -418,7 +418,16 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
     ): Promise<Post> {
       return new Promise(async (resolve, reject) => {
         const tx =
-          options?.transaction ?? db.transaction(['Posts'], 'readwrite');
+          options?.transaction ??
+          db.transaction(
+            Array.from(
+              new Set([
+                ...AuthorsClientImpl.tablesForTransaction,
+                ...PostsClientImpl.tablesForTransaction,
+              ]),
+            ),
+            'readwrite',
+          );
         const store = tx.objectStore('Posts');
         const [authorsId] = await Promise.all([
           new Promise<number>(async (resolve, reject) => {
@@ -437,7 +446,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         if (authorsId == null) {
           reject(
             new Error(
-              'An unknown error occurred while trying to join table: Authors',
+              'Unknown error occurred while trying to join table: Authors',
             ),
           );
           return;
@@ -476,7 +485,16 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
     ): Promise<Post> {
       return new Promise(async (resolve, reject) => {
         const tx =
-          options?.transaction ?? db.transaction(['Posts'], 'readwrite');
+          options?.transaction ??
+          db.transaction(
+            Array.from(
+              new Set([
+                ...AuthorsClientImpl.tablesForTransaction,
+                ...PostsClientImpl.tablesForTransaction,
+              ]),
+            ),
+            'readwrite',
+          );
         const store = tx.objectStore('Posts');
         const [authorsId] = await Promise.all([
           new Promise<number>(async (resolve, reject) => {
@@ -495,7 +513,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         if (authorsId == null) {
           reject(
             new Error(
-              'An unknown error occurred while trying to join table: Authors',
+              'Unknown error occurred while trying to join table: Authors',
             ),
           );
           return;

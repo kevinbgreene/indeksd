@@ -46,12 +46,14 @@ export function createItemTypeWithJoinsForTable(
       getItemNameForTable(table),
       undefined,
       ts.factory.createTypeLiteralNode(
-        table.body.map((next) => {
+        table.body.map((field) => {
           return ts.factory.createPropertySignature(
             undefined,
-            ts.factory.createIdentifier(next.name.value),
-            undefined,
-            typeNodeResolvingPrimaryKeys(next.type, database),
+            ts.factory.createIdentifier(field.name.value),
+            field.required
+              ? undefined
+              : ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+            typeNodeResolvingPrimaryKeys(field.type, database),
           );
         }),
       ),
@@ -66,12 +68,14 @@ export function createItemTypeWithJoinsForTable(
         ts.factory.createIdentifier(getItemNameWithJoinsForTable(table)),
         undefined,
         ts.factory.createTypeLiteralNode(
-          table.body.map((next) => {
+          table.body.map((field) => {
             return ts.factory.createPropertySignature(
               undefined,
-              ts.factory.createIdentifier(next.name.value),
-              undefined,
-              typeNodeResolvingJoins(next.type, database),
+              ts.factory.createIdentifier(field.name.value),
+              field.required
+                ? undefined
+                : ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+              typeNodeResolvingJoins(field.type, database),
             );
           }),
         ),
