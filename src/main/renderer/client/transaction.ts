@@ -18,8 +18,8 @@ export function createTransactionWithMode({
   mode: TransactionMode;
   withJoins: boolean;
 }): ts.Statement {
-  const joins = withJoins ? getJoinsForTable(table, database) : [];
-  const hasJoins = joins.length > 0;
+  const joins = getJoinsForTable(table, database);
+  const hasJoins = withJoins && joins.length > 0;
 
   return createConstStatement(
     ts.factory.createIdentifier('tx'),
@@ -33,7 +33,7 @@ export function createTransactionWithMode({
       ts.factory.createToken(ts.SyntaxKind.QuestionQuestionToken),
       hasJoins
         ? createConditionalWithJoinsForTable({ table, joins, mode })
-        : createSimpleTransactionForTable({ table, mode }),
+        : createTransactionForTable({ table, joins, mode }),
     ),
   );
 }
@@ -65,38 +65,46 @@ function createConditionalWithJoinsForTable({
       ),
       undefined,
       [
-        ts.factory.createCallExpression(
-          ts.factory.createPropertyAccessExpression(
-            COMMON_IDENTIFIERS.Array,
-            'from',
-          ),
-          undefined,
-          [
-            ts.factory.createNewExpression(COMMON_IDENTIFIERS.Set, undefined, [
-              ts.factory.createArrayLiteralExpression([
-                ...joins.map((next) => {
-                  return tablesForTransaction(next.table);
-                }),
-                tablesForTransaction(table),
-              ]),
-            ]),
-          ],
-        ),
+        getTableArrayForTransactionWithJoins(table, joins),
         ts.factory.createStringLiteral(mode),
       ],
     ),
     ts.factory.createToken(ts.SyntaxKind.ColonToken),
-    createSimpleTransactionForTable({ table, mode }),
+    createTransactionForTable({ table, joins: [], mode }),
   );
 }
 
-function createSimpleTransactionForTable({
+export function getTableArrayForTransactionWithJoins(
+  table: TableDefinition,
+  joins: ReadonlyArray<TableJoin>,
+): ts.Expression {
+  return ts.factory.createCallExpression(
+    ts.factory.createPropertyAccessExpression(COMMON_IDENTIFIERS.Array, 'from'),
+    undefined,
+    [
+      ts.factory.createNewExpression(COMMON_IDENTIFIERS.Set, undefined, [
+        ts.factory.createArrayLiteralExpression([
+          ...joins.map((next) => {
+            return tablesForTransaction(next.table);
+          }),
+          tablesForTransaction(table),
+        ]),
+      ]),
+    ],
+  );
+}
+
+function createTransactionForTable({
   table,
+  joins,
   mode,
 }: {
   table: TableDefinition;
+  joins: ReadonlyArray<TableJoin>;
   mode: TransactionMode;
 }): ts.CallExpression {
+  const hasJoins = joins.length > 0;
+
   return ts.factory.createCallExpression(
     ts.factory.createPropertyAccessExpression(
       COMMON_IDENTIFIERS.db,
@@ -104,9 +112,11 @@ function createSimpleTransactionForTable({
     ),
     undefined,
     [
-      ts.factory.createArrayLiteralExpression([
-        ts.factory.createStringLiteral(table.name.value),
-      ]),
+      hasJoins
+        ? getTableArrayForTransactionWithJoins(table, joins)
+        : ts.factory.createArrayLiteralExpression([
+            ts.factory.createStringLiteral(table.name.value),
+          ]),
       ts.factory.createStringLiteral(mode),
     ],
   );
