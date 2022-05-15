@@ -189,15 +189,21 @@ export function isAutoIncrementField(def: FieldDefinition): boolean {
 }
 
 export function getPrimaryKeyFieldForTable(
-  def: TableDefinition,
+  table: TableDefinition,
 ): FieldDefinition {
-  const keys = def.body.filter((field) => {
+  const keys = table.body.filter((field) => {
     return annotationsFromList(field.annotations, PRIMARY_KEY_ANNOTATIONS);
   });
 
   if (keys.length > 1) {
     throw new Error(
       `Only one primary key is supported per table, but found ${keys.length}`,
+    );
+  }
+
+  if (keys.length === 0) {
+    throw new Error(
+      `Table ${table.name.value} must have a primary key defined by either '@autoincrement' or '@key'`,
     );
   }
 
