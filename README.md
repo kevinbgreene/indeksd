@@ -64,10 +64,10 @@ Because our "Posts" table was defined with an autoincrement "id" field the input
 Then when we want to get, we can use either the primary key, or one of our indexes.
 
 ```
-const result1 = db.posts.get(postId);
-const result2 = db.posts.get({id: postId});
-const result3 = db.posts.get({title: 'First Post'});
-const result4 = db.posts.get({author: 'Kevin'});
+const result1 = await db.posts.get(postId);
+const result2 = await db.posts.get({id: postId});
+const result3 = await db.posts.get({title: 'First Post'});
+const result4 = await db.posts.get({author: 'Kevin'});
 ```
 
 Again the argument types here are all generated so we couldn't try to perform a get with a field not defined as an index without getting a type error.
@@ -175,7 +175,7 @@ database Blob {
 }
 ```
 
-You'll notice I changed the type of `author` in the "Posts" table to be "Author". I also added an item annotation to "Authors". I could have made the type of `author` to be "Authors", but the singular reads better. By defining the type of a field as another table I'm setting up a relationship between these two tables. When storing data a primary key to the "Authors" table will be stored in the `author` field in the "Posts" table. When performing a `get` the client will automatically fetch the author and merge the objects so the author field will actually hold the author object.
+You'll notice I changed the type of `author` in the `Posts` table to be `Author`. I also added an item annotation to `Authors`. I could have made the type of `author` to be `Authors`, but the singular reads better. By defining the type of a field as another table I'm setting up a relationship between these two tables. When storing data a primary key to the `Authors` table will be stored in the `author` field in the `Posts` table. When performing a `get` the client will automatically fetch the author and merge the objects so the author field will actually hold the author object.
 
 In the generated code there are two types created for `Posts`:
 
@@ -197,11 +197,28 @@ type PostsWithJoins = {
 By default `get` operations will return the second object. You can disable this by setting `withJoins` to `false`. The `get` operations take an optional second argument that allows you to define some additional options for your query.
 
 ```
-const postWithAuthor: PostsWithJoins = db.posts.get({id: 1});
-const postWithoutAuthor: Posts = db.posts.get({id: 1}, {withJoins: false});
+const postWithAuthor: PostsWithJoins = await db.posts.get({id: 1});
+const postWithoutAuthor: Posts = await db.posts.get({id: 1}, {withJoins: false});
 ```
 
-Automated joins only work for `get` operations. In the future I would like to add support to the `add` and `put` operations.
+Automated joins also work for `add` and `put` operations. Working still from out `Blog` example we don't have to already have an `Author` in the `Authors` table... we can combine our insert of both a `Post` and an `Author` into one operation.
+
+```
+const postWithAuthor: PostsAddArgs = {
+  title: 'First Post',
+  content: 'Nothing special',
+  author: {
+    firstName: 'Kevin',
+    lastName: 'Greene',
+  }
+}
+
+const result: Posts = await db.posts.add(postWithAuthor);
+```
+
+Note the return type of the `add` operation. It is the `Posts` type. That means the `author` field on the returned object with contain the primary key of the `Author` that was added to the `Authors` table.
+
+If there are nested joins used in a single `add` or `put` operation in order to get the primary key of objects added down the tree you would need to do those lookups yourself. For example, look up the added `Author` with the returned `id` and then look at the primary keys of anything inserted on that `Author`.
 
 ## Client Operations
 
