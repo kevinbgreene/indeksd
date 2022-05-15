@@ -8,7 +8,11 @@ import {
   getPrimaryKeyTypeForTableAsString,
 } from '../keys';
 import { getJoinsForTable, TableJoin } from '../joins';
-import { createConstStatement, createLetStatement } from '../helpers';
+import {
+  createConstStatement,
+  createLetStatement,
+  createNewPromiseWithBody,
+} from '../helpers';
 
 export function clientTypeNameForTable(def: TableDefinition): string {
   return `${capitalize(def.name.value)}Client`;
@@ -247,7 +251,51 @@ export function createJoinHandling(
   database: DatabaseDefinition,
 ): ReadonlyArray<ts.Statement> {
   const joins: ReadonlyArray<TableJoin> = getJoinsForTable(table, database);
-  const statements = joins.flatMap((next) => createHandlingForTableJoin(next));
+  // const statements = joins.flatMap((next) => createHandlingForTableJoin(next));
+  const statements: Array<ts.Statement> = [
+    ts.factory.createVariableStatement(
+      undefined,
+      ts.factory.createVariableDeclarationList(
+        [
+          ts.factory.createVariableDeclaration(
+            ts.factory.createArrayBindingPattern(
+              joins.map((join) => {
+                return ts.factory.createBindingElement(
+                  undefined,
+                  undefined,
+                  identifierForJoinId(join),
+                  undefined,
+                );
+              }),
+            ),
+            undefined,
+            undefined,
+            ts.factory.createAwaitExpression(
+              ts.factory.createCallExpression(
+                ts.factory.createPropertyAccessExpression(
+                  COMMON_IDENTIFIERS.Promise,
+                  COMMON_IDENTIFIERS.all,
+                ),
+                undefined,
+                [
+                  ts.factory.createArrayLiteralExpression(
+                    joins.map((join) => {
+                      return createHandlingForTableJoin(join);
+                    }),
+                    true,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        ts.NodeFlags.Const,
+      ),
+    ),
+    ...joins.map((join) => {
+      return createNullHandlingForTableJoin(join);
+    }),
+  ];
   return statements;
 }
 
@@ -257,58 +305,89 @@ export function identifierForJoinId(join: TableJoin): ts.Identifier {
   );
 }
 
-function createHandlingForTableJoin(
-  join: TableJoin,
-): ReadonlyArray<ts.Statement> {
-  return [
-    createLetStatement(
+function createNullHandlingForTableJoin(join: TableJoin): ts.Statement {
+  return ts.factory.createIfStatement(
+    ts.factory.createBinaryExpression(
       identifierForJoinId(join),
-      getPrimaryKeyTypeForTable(join.table),
-      undefined,
+      ts.SyntaxKind.EqualsEqualsToken,
+      ts.factory.createNull(),
     ),
-    ts.factory.createIfStatement(
-      ts.factory.createBinaryExpression(
-        ts.factory.createTypeOfExpression(
-          ts.factory.createPropertyAccessExpression(
-            COMMON_IDENTIFIERS.arg,
-            join.fieldName,
+    ts.factory.createBlock(
+      [
+        ts.factory.createExpressionStatement(
+          ts.factory.createCallExpression(
+            COMMON_IDENTIFIERS.reject,
+            undefined,
+            [
+              ts.factory.createNewExpression(
+                COMMON_IDENTIFIERS.Error,
+                undefined,
+                [
+                  ts.factory.createStringLiteral(
+                    `An unknown error occurred while trying to join table: ${join.table.name.value}`,
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        ts.SyntaxKind.EqualsEqualsEqualsToken,
-        ts.factory.createStringLiteral(
-          getPrimaryKeyTypeForTableAsString(join.table),
-        ),
-      ),
-      ts.factory.createBlock(
+        ts.factory.createReturnStatement(undefined),
+      ],
+      true,
+    ),
+  );
+}
+
+function createHandlingForTableJoin(join: TableJoin): ts.Expression {
+  return ts.factory.createNewExpression(
+    COMMON_IDENTIFIERS.Promise,
+    [getPrimaryKeyTypeForTable(join.table)],
+    [
+      ts.factory.createArrowFunction(
+        [ts.factory.createToken(ts.SyntaxKind.AsyncKeyword)],
+        undefined,
         [
-          ts.factory.createExpressionStatement(
-            ts.factory.createAssignment(
-              identifierForJoinId(join),
-              ts.factory.createPropertyAccessExpression(
-                COMMON_IDENTIFIERS.arg,
-                join.fieldName,
-              ),
-            ),
+          ts.factory.createParameterDeclaration(
+            undefined,
+            undefined,
+            undefined,
+            COMMON_IDENTIFIERS.resolve,
+            undefined,
+            undefined,
+            undefined,
+          ),
+          ts.factory.createParameterDeclaration(
+            undefined,
+            undefined,
+            undefined,
+            COMMON_IDENTIFIERS.reject,
+            undefined,
+            undefined,
+            undefined,
           ),
         ],
-        true,
-      ),
-      ts.factory.createBlock(
-        [
-          ts.factory.createTryStatement(
-            ts.factory.createBlock(
-              [
-                createConstStatement(
-                  ts.factory.createIdentifier(join.fieldName),
-                  undefined,
-                  ts.factory.createAwaitExpression(
+        undefined,
+        undefined,
+        ts.factory.createBlock(
+          [
+            ts.factory.createIfStatement(
+              ts.factory.createBinaryExpression(
+                ts.factory.createTypeOfExpression(
+                  ts.factory.createPropertyAccessExpression(
+                    COMMON_IDENTIFIERS.arg,
+                    join.fieldName,
+                  ),
+                ),
+                ts.SyntaxKind.EqualsEqualsEqualsToken,
+                ts.factory.createStringLiteral(
+                  getPrimaryKeyTypeForTableAsString(join.table),
+                ),
+              ),
+              ts.factory.createBlock(
+                [
+                  ts.factory.createExpressionStatement(
                     ts.factory.createCallExpression(
-                      ts.factory.createPropertyAccessExpression(
-                        ts.factory.createIdentifier(
-                          clientVariableNameForTable(join.table),
-                        ),
-                        'put',
-                      ),
+                      COMMON_IDENTIFIERS.resolve,
                       undefined,
                       [
                         ts.factory.createPropertyAccessExpression(
@@ -318,47 +397,81 @@ function createHandlingForTableJoin(
                       ],
                     ),
                   ),
-                ),
-                ts.factory.createExpressionStatement(
-                  ts.factory.createAssignment(
-                    identifierForJoinId(join),
-                    ts.factory.createPropertyAccessExpression(
-                      ts.factory.createIdentifier(join.fieldName),
-                      getPrimaryKeyFieldForTable(join.table).name.value,
-                    ),
-                  ),
-                ),
-              ],
-              true,
-            ),
-            ts.factory.createCatchClause(
-              ts.factory.createVariableDeclaration(
-                COMMON_IDENTIFIERS.error,
-                undefined,
-                undefined,
-                undefined,
+                ],
+                true,
               ),
               ts.factory.createBlock(
-                [ts.factory.createReturnStatement(undefined)],
+                [
+                  ts.factory.createTryStatement(
+                    ts.factory.createBlock(
+                      [
+                        createConstStatement(
+                          ts.factory.createIdentifier(join.fieldName),
+                          undefined,
+                          ts.factory.createAwaitExpression(
+                            ts.factory.createCallExpression(
+                              ts.factory.createPropertyAccessExpression(
+                                ts.factory.createIdentifier(
+                                  clientVariableNameForTable(join.table),
+                                ),
+                                'put',
+                              ),
+                              undefined,
+                              [
+                                ts.factory.createPropertyAccessExpression(
+                                  COMMON_IDENTIFIERS.arg,
+                                  join.fieldName,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        ts.factory.createExpressionStatement(
+                          ts.factory.createCallExpression(
+                            COMMON_IDENTIFIERS.resolve,
+                            undefined,
+                            [
+                              ts.factory.createPropertyAccessExpression(
+                                ts.factory.createIdentifier(join.fieldName),
+                                getPrimaryKeyFieldForTable(join.table).name
+                                  .value,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      true,
+                    ),
+                    ts.factory.createCatchClause(
+                      ts.factory.createVariableDeclaration(
+                        COMMON_IDENTIFIERS.error,
+                        undefined,
+                        undefined,
+                        undefined,
+                      ),
+                      ts.factory.createBlock(
+                        [
+                          ts.factory.createExpressionStatement(
+                            ts.factory.createCallExpression(
+                              COMMON_IDENTIFIERS.reject,
+                              undefined,
+                              [COMMON_IDENTIFIERS.error],
+                            ),
+                          ),
+                        ],
+                        true,
+                      ),
+                    ),
+                    undefined,
+                  ),
+                ],
                 true,
               ),
             ),
-            undefined,
-          ),
-        ],
-        true,
+          ],
+          true,
+        ),
       ),
-    ),
-    ts.factory.createIfStatement(
-      ts.factory.createBinaryExpression(
-        identifierForJoinId(join),
-        ts.SyntaxKind.EqualsEqualsToken,
-        ts.factory.createNull(),
-      ),
-      ts.factory.createBlock(
-        [ts.factory.createReturnStatement(undefined)],
-        true,
-      ),
-    ),
-  ];
+    ],
+  );
 }

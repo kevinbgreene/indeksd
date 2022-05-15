@@ -25,10 +25,31 @@ export type PostWithJoins = {
   content: string;
   author: Authors;
 };
-export type AuthorsAddArgs = Omit<Authors, 'id'>;
-export type PostsAddArgs = Post;
-export type AuthorsPutArgs = AuthorsAddArgs | Authors;
-export type PostsPutArgs = PostsAddArgs | Post;
+export type AuthorsAddArgs = {
+  name: string;
+  email: string;
+};
+export type PostsAddArgs = {
+  postId: string;
+  name: string;
+  content: string;
+  author: number | AuthorsPutArgs;
+};
+export type AuthorsPutArgs =
+  | AuthorsAddArgs
+  | {
+      id: number;
+      name: string;
+      email: string;
+    };
+export type PostsPutArgs =
+  | PostsAddArgs
+  | {
+      postId: string;
+      name: string;
+      content: string;
+      author: number | AuthorsPutArgs;
+    };
 export type AuthorsGetArgs =
   | number
   | {
@@ -140,13 +161,13 @@ export type AuthorsClient = {
     options?: {
       transaction?: IDBTransaction;
     },
-  ): Promise<number>;
+  ): Promise<Authors>;
   put(
     arg: AuthorsPutArgs,
     options?: {
       transaction?: IDBTransaction;
     },
-  ): Promise<number>;
+  ): Promise<Authors>;
   get(
     arg: AuthorsGetArgs,
     options?: {
@@ -166,13 +187,13 @@ export type PostsClient = {
     options?: {
       transaction?: IDBTransaction;
     },
-  ): Promise<string>;
+  ): Promise<Post>;
   put(
     arg: PostsPutArgs,
     options?: {
       transaction?: IDBTransaction;
     },
-  ): Promise<string>;
+  ): Promise<Post>;
   get(
     arg: PostsGetArgs,
     options?: {
@@ -232,12 +253,15 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
       options?: {
         transaction?: IDBTransaction;
       },
-    ): Promise<number> {
-      return new Promise((resolve, reject) => {
+    ): Promise<Authors> {
+      return new Promise(async (resolve, reject) => {
         const tx =
           options?.transaction ?? db.transaction(['Authors'], 'readwrite');
         const store = tx.objectStore('Authors');
-        const DBAddRequest: IDBRequest = store.add(arg);
+        const [] = await Promise.all([]);
+        const DBAddRequest: IDBRequest = store.add({
+          ...arg,
+        });
         DBAddRequest.onerror = () => {
           if (DBAddRequest != null) {
             reject(DBAddRequest.error);
@@ -249,7 +273,10 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         };
         DBAddRequest.onsuccess = () => {
           if (DBAddRequest != null) {
-            resolve(DBAddRequest.result);
+            resolve({
+              ...arg,
+              id: DBAddRequest.result,
+            });
           } else {
             reject(new Error('Operation produced a null result'));
           }
@@ -261,12 +288,15 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
       options?: {
         transaction?: IDBTransaction;
       },
-    ): Promise<number> {
-      return new Promise((resolve, reject) => {
+    ): Promise<Authors> {
+      return new Promise(async (resolve, reject) => {
         const tx =
           options?.transaction ?? db.transaction(['Authors'], 'readwrite');
         const store = tx.objectStore('Authors');
-        const DBPutRequest: IDBRequest = store.put(arg);
+        const [] = await Promise.all([]);
+        const DBPutRequest: IDBRequest = store.put({
+          ...arg,
+        });
         DBPutRequest.onerror = () => {
           if (DBPutRequest != null) {
             reject(DBPutRequest.error);
@@ -278,7 +308,10 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         };
         DBPutRequest.onsuccess = () => {
           if (DBPutRequest != null) {
-            resolve(DBPutRequest.result);
+            resolve({
+              ...arg,
+              id: DBPutRequest.result,
+            });
           } else {
             reject(new Error('Operation produced a null result'));
           }
@@ -382,12 +415,37 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
       options?: {
         transaction?: IDBTransaction;
       },
-    ): Promise<string> {
-      return new Promise((resolve, reject) => {
+    ): Promise<Post> {
+      return new Promise(async (resolve, reject) => {
         const tx =
           options?.transaction ?? db.transaction(['Posts'], 'readwrite');
         const store = tx.objectStore('Posts');
-        const DBAddRequest: IDBRequest = store.add(arg);
+        const [authorsId] = await Promise.all([
+          new Promise<number>(async (resolve, reject) => {
+            if (typeof arg.author === 'number') {
+              resolve(arg.author);
+            } else {
+              try {
+                const author = await authorsClient.put(arg.author);
+                resolve(author.id);
+              } catch (error) {
+                reject(error);
+              }
+            }
+          }),
+        ]);
+        if (authorsId == null) {
+          reject(
+            new Error(
+              'An unknown error occurred while trying to join table: Authors',
+            ),
+          );
+          return;
+        }
+        const DBAddRequest: IDBRequest = store.add({
+          ...arg,
+          author: authorsId,
+        });
         DBAddRequest.onerror = () => {
           if (DBAddRequest != null) {
             reject(DBAddRequest.error);
@@ -399,7 +457,11 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         };
         DBAddRequest.onsuccess = () => {
           if (DBAddRequest != null) {
-            resolve(DBAddRequest.result);
+            resolve({
+              ...arg,
+              author: authorsId,
+              postId: DBAddRequest.result,
+            });
           } else {
             reject(new Error('Operation produced a null result'));
           }
@@ -411,12 +473,37 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
       options?: {
         transaction?: IDBTransaction;
       },
-    ): Promise<string> {
-      return new Promise((resolve, reject) => {
+    ): Promise<Post> {
+      return new Promise(async (resolve, reject) => {
         const tx =
           options?.transaction ?? db.transaction(['Posts'], 'readwrite');
         const store = tx.objectStore('Posts');
-        const DBPutRequest: IDBRequest = store.put(arg);
+        const [authorsId] = await Promise.all([
+          new Promise<number>(async (resolve, reject) => {
+            if (typeof arg.author === 'number') {
+              resolve(arg.author);
+            } else {
+              try {
+                const author = await authorsClient.put(arg.author);
+                resolve(author.id);
+              } catch (error) {
+                reject(error);
+              }
+            }
+          }),
+        ]);
+        if (authorsId == null) {
+          reject(
+            new Error(
+              'An unknown error occurred while trying to join table: Authors',
+            ),
+          );
+          return;
+        }
+        const DBPutRequest: IDBRequest = store.put({
+          ...arg,
+          author: authorsId,
+        });
         DBPutRequest.onerror = () => {
           if (DBPutRequest != null) {
             reject(DBPutRequest.error);
@@ -428,7 +515,11 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         };
         DBPutRequest.onsuccess = () => {
           if (DBPutRequest != null) {
-            resolve(DBPutRequest.result);
+            resolve({
+              ...arg,
+              author: authorsId,
+              postId: DBPutRequest.result,
+            });
           } else {
             reject(new Error('Operation produced a null result'));
           }

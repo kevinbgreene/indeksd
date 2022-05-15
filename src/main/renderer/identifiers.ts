@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 
 export const COMMON_IDENTIFIERS = {
+  all: ts.factory.createIdentifier('all'),
   arg: ts.factory.createIdentifier('arg'),
   add: ts.factory.createIdentifier('add'),
   error: ts.factory.createIdentifier('error'),
