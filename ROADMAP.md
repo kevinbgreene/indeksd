@@ -6,6 +6,18 @@
 
 Create a validator and debugger that will show the user exactly where an error occurred (without confusion stack trace) and suggest how to fix it.
 
+- **Support Defaults** Ability to declare defaults in the schema.
+
+```
+database TodoDatabase {
+  table Todos {
+    @autoincrement id: number;
+    name: string;
+    complete: boolean = false;
+  }
+}
+```
+
 - **Table Subscriptions** Support to subscribe to changes to a given table. Could be used to support a React hook for rendering content added to the table (for example).
 
 - **Cursor Support**
