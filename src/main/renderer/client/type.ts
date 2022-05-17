@@ -1,11 +1,14 @@
 import * as ts from 'typescript';
-import { DatabaseDefinition } from '../../parser';
+import { DatabaseDefinition, TableDefinition } from '../../parser';
 import { COMMON_IDENTIFIERS } from '../identifiers';
+import { getIndexesForTableAsArray } from '../keys';
 import { createBooleanType, createNumberType } from '../types';
-import { createAddMethodSignature } from './addMethod';
+import { capitalize } from '../utils';
+import { createAddMethodSignatureForTable } from './addMethod';
 import { clientTypeNameForTable, createDatabaseClientName } from './common';
 import { createGetMethodSignaturesForTable } from './getMethod';
-import { createPutMethodSignature } from './putMethod';
+import { createPutMethodSignatureForTable } from './putMethod';
+import { createWhereMethodSignaturesForTable } from './whereMethod';
 
 type AvailableOptions =
   | 'transaction'
@@ -61,6 +64,14 @@ export function createOptionsTypeNode(
     }
   });
   return ts.factory.createTypeLiteralNode(properties);
+}
+
+export function createReadOnlyArrayTypeNode(
+  baseType: ts.TypeNode,
+): ts.TypeReferenceNode {
+  return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.ReadonlyArray, [
+    baseType,
+  ]);
 }
 
 function createCountOptionPropertySignature(): ts.PropertySignature {
@@ -119,18 +130,10 @@ export function createClientTypeDeclaration(
         ts.factory.createIdentifier(clientTypeNameForTable(table)),
         undefined,
         ts.factory.createTypeLiteralNode([
-          createAddMethodSignature(table),
-          createPutMethodSignature(table),
-          ...createGetMethodSignaturesForTable({
-            table,
-            database,
-            methodName: 'get',
-          }),
-          ...createGetMethodSignaturesForTable({
-            table,
-            database,
-            methodName: 'getAll',
-          }),
+          createAddMethodSignatureForTable(table),
+          createPutMethodSignatureForTable(table),
+          ...createGetMethodSignaturesForTable(table, database),
+          ...createWhereMethodSignaturesForTable(table, database),
         ]),
       );
     }),
@@ -163,6 +166,36 @@ export function createClientTypeDeclaration(
       ]),
     ),
   ];
+}
+
+export function indexTypeNameForTable(table: TableDefinition): string {
+  return `${capitalize(table.name.value)}Indexes`;
+}
+
+export function createIndexesTypeReferenceForTable(
+  table: TableDefinition,
+): ts.TypeReferenceNode {
+  return ts.factory.createTypeReferenceNode(indexTypeNameForTable(table));
+}
+
+export function createIndexesTypeForTable(
+  table: TableDefinition,
+): ts.TypeAliasDeclaration {
+  const indexes = getIndexesForTableAsArray(table);
+
+  return ts.factory.createTypeAliasDeclaration(
+    undefined,
+    [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
+    ts.factory.createIdentifier(indexTypeNameForTable(table)),
+    undefined,
+    ts.factory.createUnionTypeNode(
+      indexes.map((index) => {
+        return ts.factory.createLiteralTypeNode(
+          ts.factory.createStringLiteral(index?.name),
+        );
+      }),
+    ),
+  );
 }
 
 export function createParameterDeclarationsForTransaction(

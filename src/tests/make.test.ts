@@ -9,7 +9,7 @@ const schema = make(content);
 const expected = loadSolution('test');
 
 function saveFiles(content: string): void {
-  const outPath: string = path.resolve(__dirname, `./test-schema.txt`);
+  const outPath: string = path.resolve(__dirname, `./test-schema.ts`);
   try {
     fs.outputFileSync(outPath, content);
   } catch (err) {

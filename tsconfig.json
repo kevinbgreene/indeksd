@@ -8,6 +8,8 @@
     "rootDir": "./src",
     "outDir": "./dist",
     "noEmitOnError": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "strict": true,
     "pretty": true
   },

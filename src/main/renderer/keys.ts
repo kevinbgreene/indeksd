@@ -1,7 +1,6 @@
 import * as ts from 'typescript';
 import {
   FieldDefinition,
-  TypeNode,
   TableDefinition,
   Annotation,
   Annotations,
@@ -71,6 +70,7 @@ export function getIndexesForTable(table: TableDefinition): TableIndexMap {
       fields: Array<FieldDefinition>;
     };
   } = {};
+
   table.body.forEach((field: FieldDefinition) => {
     const indexesForField: {
       [name: string]: {
@@ -162,6 +162,14 @@ export function getIndexesForTable(table: TableDefinition): TableIndexMap {
     },
     { key: null, indexes: [] },
   );
+}
+
+export function getIndexesForTableAsArray(
+  table: TableDefinition,
+): ReadonlyArray<TableIndex> {
+  return Object.values(getIndexesForTable(table))
+    .flat()
+    .filter((next): next is TableIndex => next != null);
 }
 
 export function getAutoIncrementFieldForTable(

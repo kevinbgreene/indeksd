@@ -3,21 +3,26 @@ import { COMMON_IDENTIFIERS } from './identifiers';
 
 export function createNewPromiseWithBody(
   modifier: ts.ModifierToken<ts.SyntaxKind.AsyncKeyword> | undefined,
+  typeArguments: ReadonlyArray<ts.TypeNode> | undefined,
   body: ts.Block,
 ): ts.NewExpression {
-  return ts.factory.createNewExpression(COMMON_IDENTIFIERS.Promise, undefined, [
-    ts.factory.createArrowFunction(
-      modifier != undefined ? [modifier] : undefined,
-      undefined,
-      [
-        createParameterDeclaration(COMMON_IDENTIFIERS.resolve),
-        createParameterDeclaration(COMMON_IDENTIFIERS.reject),
-      ],
-      undefined,
-      undefined,
-      body,
-    ),
-  ]);
+  return ts.factory.createNewExpression(
+    COMMON_IDENTIFIERS.Promise,
+    typeArguments,
+    [
+      ts.factory.createArrowFunction(
+        modifier != undefined ? [modifier] : undefined,
+        undefined,
+        [
+          createParameterDeclaration(COMMON_IDENTIFIERS.resolve),
+          createParameterDeclaration(COMMON_IDENTIFIERS.reject),
+        ],
+        undefined,
+        undefined,
+        body,
+      ),
+    ],
+  );
 }
 
 function createVariableStatement(
@@ -80,4 +85,12 @@ export function createParameterDeclaration(
     undefined,
     undefined,
   );
+}
+
+export function createNewErrorWithMessage(
+  msg: string | ts.Expression,
+): ts.NewExpression {
+  return ts.factory.createNewExpression(COMMON_IDENTIFIERS.Error, undefined, [
+    typeof msg === 'string' ? ts.factory.createStringLiteral(msg) : msg,
+  ]);
 }

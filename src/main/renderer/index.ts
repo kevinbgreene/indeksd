@@ -5,7 +5,7 @@ export { renderDatabaseDefinition, renderTypeDefinition };
 
 import * as ts from 'typescript';
 import * as renderer from '../renderer';
-import { DatabaseSchema, Definition } from '../parser/types';
+import { Definition } from '../parser/types';
 
 export function renderDefinition(def: Definition): ReadonlyArray<ts.Statement> {
   switch (def.kind) {
@@ -27,8 +27,4 @@ export function renderDefinitions(
   return defs.reduce((acc: Array<ts.Statement>, next: Definition) => {
     return [...acc, ...renderDefinition(next)];
   }, []);
-}
-
-export function renderSchema(schema: DatabaseSchema): Array<ts.Statement> {
-  return [];
 }

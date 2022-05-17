@@ -49,7 +49,7 @@ class ParseError extends Error {
 }
 
 export function createParser(tokens: Array<Token>): Parser {
-  let comments: Array<Comment> = [];
+  // let comments: Array<Comment> = [];
   let currentIndex: number = 0;
 
   // PUBLIC

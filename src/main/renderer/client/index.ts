@@ -13,6 +13,7 @@ import {
 import { createGetMethod } from './getMethod';
 import { createPutMethod } from './putMethod';
 import { createParameterDeclarationsForTransaction } from './type';
+import { createWhereMethod } from './whereMethod';
 
 export { createClientTypeDeclaration } from './type';
 export { createClientTypeNode } from './common';
@@ -38,8 +39,8 @@ function createClientDeclarationForTable(
         createTablesStaticArray(table, database),
         createAddMethod(table, database),
         createPutMethod(table, database),
-        ...createGetMethod({ table, database, methodName: 'get' }),
-        ...createGetMethod({ table, database, methodName: 'getAll' }),
+        ...createGetMethod(table, database),
+        ...createWhereMethod(table, database),
       ],
     ),
     createConstStatement(
@@ -64,7 +65,7 @@ function createTablesStaticArray(
   return ts.factory.createPropertyDeclaration(
     undefined,
     [ts.factory.createToken(ts.SyntaxKind.StaticKeyword)],
-    ts.factory.createIdentifier('tablesForTransaction'),
+    COMMON_IDENTIFIERS.tablesForTransaction,
     undefined,
     ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.ReadonlyArray, [
       createStringType(),
@@ -84,7 +85,7 @@ export function createClientFunction(
     undefined,
     undefined,
     undefined,
-    ts.factory.createIdentifier('createDatabaseClient'),
+    COMMON_IDENTIFIERS.createDatabaseClient,
     undefined,
     [
       ts.factory.createParameterDeclaration(

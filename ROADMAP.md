@@ -1,6 +1,17 @@
 ## Planned Features
 
-- **Key Ranges** Support typed IDBKeyRanges
+- **Pagination** Method for easy pagination of query results.
+
+Sketch of an API...
+
+```
+const page = db.posts.page('id').isGreaterThan(4).size(10);
+cosnt pageOne: Array<PostsWithJoins> = page.next();
+cosnt pageTwo: Array<PostsWithJoins> = page.next();
+cosnt pageThree: Array<PostsWithJoins> = page.next();
+
+const hasMore: boolean = page.hasMore();
+```
 
 - **Version Enforcement** Compare schema changes to enforce bumping the database version when necessary. Possibly use a cache file or directory that could be committed to the repository to keep data needed to compare. Or use checksums in the generated files.
 
@@ -39,4 +50,4 @@ session Todos = Array<{
 }>;
 ```
 
-- **Support Complex TypeScript Types** In the current form schemas can contain any JavaScript primitive type, anything that conforms to a TypeScript TypeReferenceNode with type parameters, object literal types and tuple types. This leaves out things like mapped types and conditional types.
+- **Support Complex TypeScript Types** In the current form schemas can contain any JavaScript primitive type, anything that conforms to a TypeScript `TypeReferenceNode` with type parameters, object literal types and tuple types. This leaves out things like mapped types and conditional types.

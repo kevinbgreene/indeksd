@@ -22,7 +22,7 @@ export function createTransactionWithMode({
   const hasJoins = withJoins && joins.length > 0;
 
   return createConstStatement(
-    ts.factory.createIdentifier('tx'),
+    COMMON_IDENTIFIERS.tx,
     undefined,
     ts.factory.createBinaryExpression(
       ts.factory.createPropertyAccessChain(

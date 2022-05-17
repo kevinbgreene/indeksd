@@ -25,6 +25,29 @@ export type PostWithJoins = {
   content?: string;
   author: Authors;
 };
+export type AuthorsIndexes = 'id' | 'name' | 'email';
+export type PostsIndexes = 'postId' | 'name' | 'name_author' | 'author';
+export type AuthorsWhereQueryType<IndexName extends AuthorsIndexes> =
+  IndexName extends 'id'
+    ? number
+    : IndexName extends 'name'
+    ? string
+    : IndexName extends 'email'
+    ? string
+    : never;
+export type PostsWhereQueryType<IndexName extends PostsIndexes> =
+  IndexName extends 'postId'
+    ? string
+    : IndexName extends 'name'
+    ? string
+    : IndexName extends 'name_author'
+    ? {
+        name: string;
+        author: number;
+      }
+    : IndexName extends 'author'
+    ? number
+    : never;
 export type AuthorsAddArgs = {
   name: string;
   email: string;
@@ -61,7 +84,6 @@ export type AuthorsGetArgs =
   | {
       email: string;
     };
-export type AuthorsGetAllArgs = AuthorsGetArgs | undefined;
 export type PostsGetArgs =
   | string
   | {
@@ -77,7 +99,6 @@ export type PostsGetArgs =
   | {
       author: number;
     };
-export type PostsGetAllArgs = PostsGetArgs | undefined;
 const isAuthorsIdIndex = (
   arg?: AuthorsGetArgs,
 ): arg is {
@@ -157,6 +178,14 @@ const isPostsAuthorIndex = (
     Reflect.has(arg, 'author')
   );
 };
+type RangeQuery<ArgType, ReturnType> = {
+  isGreaterThan(arg: ArgType): ReturnType;
+  isGreaterThanOrEqual(arg: ArgType): ReturnType;
+  isLessThan(arg: ArgType): ReturnType;
+  isLessThanOrEqual(arg: ArgType): ReturnType;
+  isBetween(arg: { from: ArgType; to: ArgType }): ReturnType;
+  isEqualTo(arg: ArgType): ReturnType;
+};
 export type AuthorsClient = {
   add(
     arg: AuthorsAddArgs,
@@ -176,12 +205,15 @@ export type AuthorsClient = {
       transaction?: IDBTransaction;
     },
   ): Promise<Authors>;
-  getAll(
-    arg?: AuthorsGetAllArgs,
+  where<IndexName extends AuthorsIndexes>(
+    indexName: IndexName,
     options?: {
       transaction?: IDBTransaction;
     },
-  ): Promise<ReadonlyArray<Authors>>;
+  ): RangeQuery<
+    AuthorsWhereQueryType<IndexName>,
+    Promise<ReadonlyArray<Authors>>
+  >;
 };
 export type PostsClient = {
   add(
@@ -217,27 +249,33 @@ export type PostsClient = {
       withJoins?: boolean;
     },
   ): Promise<Post | PostWithJoins>;
-  getAll(
-    arg?: PostsGetAllArgs,
+  where<IndexName extends PostsIndexes>(
+    indexName: IndexName,
     options?: {
       transaction?: IDBTransaction;
       withJoins?: true;
     },
-  ): Promise<ReadonlyArray<PostWithJoins>>;
-  getAll(
-    arg: PostsGetAllArgs,
+  ): RangeQuery<
+    PostsWhereQueryType<IndexName>,
+    Promise<ReadonlyArray<PostWithJoins>>
+  >;
+  where<IndexName extends PostsIndexes>(
+    indexName: IndexName,
     options: {
       transaction?: IDBTransaction;
       withJoins: false;
     },
-  ): Promise<ReadonlyArray<Post>>;
-  getAll(
-    arg?: PostsGetAllArgs,
+  ): RangeQuery<PostsWhereQueryType<IndexName>, Promise<ReadonlyArray<Post>>>;
+  where<IndexName extends PostsIndexes>(
+    indexName: IndexName,
     options?: {
       transaction?: IDBTransaction;
       withJoins?: boolean;
     },
-  ): Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>>;
+  ): RangeQuery<
+    PostsWhereQueryType<IndexName>,
+    Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>>
+  >;
 };
 export type MyDatabaseClient = {
   transaction: (
@@ -364,49 +402,195 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         }
       });
     }
-    getAll(
-      arg?: AuthorsGetAllArgs,
-      options?: {
+    where<IndexName extends AuthorsIndexes>(
+      indexName: IndexName,
+      options: {
         transaction?: IDBTransaction;
+        withJoins: false;
       },
-    ): Promise<ReadonlyArray<Authors>> {
-      return new Promise((resolve, reject) => {
-        const tx =
-          options?.transaction ?? db.transaction(['Authors'], 'readonly');
-        const store = tx.objectStore('Authors');
-        let DBGetRequest: IDBRequest | null = null;
-        if (isAuthorsIdIndex(arg)) {
-          DBGetRequest = store.getAll(arg.id);
-        } else if (isAuthorsNameIndex(arg)) {
-          const index: IDBIndex = store.index('name');
-          DBGetRequest = index.getAll([arg.name]);
-        } else if (isAuthorsEmailIndex(arg)) {
-          const index: IDBIndex = store.index('email');
-          DBGetRequest = index.getAll([arg.email]);
-        } else {
-          DBGetRequest = store.getAll(arg);
-        }
-        if (DBGetRequest != null) {
-          DBGetRequest.onerror = () => {
-            if (DBGetRequest != null) {
-              reject(DBGetRequest.error);
-            } else {
-              reject(
-                new Error('Unknown error occurred trying to perform operation'),
+    ): RangeQuery<
+      AuthorsWhereQueryType<IndexName>,
+      Promise<ReadonlyArray<Authors>>
+    > {
+      const tx =
+        options?.transaction ?? db.transaction(['Authors'], 'readonly');
+      const store = tx.objectStore('Authors');
+      const executeQuery = (
+        target: IDBObjectStore | IDBIndex,
+        range: IDBKeyRange,
+      ) => {
+        return new Promise<ReadonlyArray<Authors>>(async (resolve, reject) => {
+          const DBGetRequest: IDBRequest = target.getAll(range);
+          if (DBGetRequest != null) {
+            DBGetRequest.onerror = () => {
+              if (DBGetRequest != null) {
+                reject(DBGetRequest.error);
+              } else {
+                reject(
+                  new Error(
+                    'Unknown error occurred trying to perform operation',
+                  ),
+                );
+              }
+            };
+            DBGetRequest.onsuccess = () => {
+              if (DBGetRequest != null && DBGetRequest.result != null) {
+                resolve((DBGetRequest as IDBRequest).result);
+              } else {
+                reject(new Error('No result found for query'));
+              }
+            };
+          } else {
+            reject(new Error('No available index for given query'));
+          }
+        });
+      };
+      return {
+        isGreaterThan(query) {
+          switch (indexName) {
+            case 'id': {
+              return executeQuery(store, IDBKeyRange.lowerBound(query));
+            }
+            case 'name': {
+              return executeQuery(
+                store.index('name'),
+                IDBKeyRange.lowerBound(query),
               );
             }
-          };
-          DBGetRequest.onsuccess = () => {
-            if (DBGetRequest != null && DBGetRequest.result != null) {
-              resolve((DBGetRequest as IDBRequest).result);
-            } else {
-              reject(new Error('No result found for query'));
+            case 'email': {
+              return executeQuery(
+                store.index('email'),
+                IDBKeyRange.lowerBound(query),
+              );
             }
-          };
-        } else {
-          reject(new Error('No available index for given query'));
-        }
-      });
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isGreaterThanOrEqual(query) {
+          switch (indexName) {
+            case 'id': {
+              return executeQuery(store, IDBKeyRange.lowerBound(query));
+            }
+            case 'name': {
+              return executeQuery(
+                store.index('name'),
+                IDBKeyRange.lowerBound(query),
+              );
+            }
+            case 'email': {
+              return executeQuery(
+                store.index('email'),
+                IDBKeyRange.lowerBound(query),
+              );
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isLessThan(query) {
+          switch (indexName) {
+            case 'id': {
+              return executeQuery(store, IDBKeyRange.upperBound(query));
+            }
+            case 'name': {
+              return executeQuery(
+                store.index('name'),
+                IDBKeyRange.upperBound(query),
+              );
+            }
+            case 'email': {
+              return executeQuery(
+                store.index('email'),
+                IDBKeyRange.upperBound(query),
+              );
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isLessThanOrEqual(query) {
+          switch (indexName) {
+            case 'id': {
+              return executeQuery(store, IDBKeyRange.upperBound(query));
+            }
+            case 'name': {
+              return executeQuery(
+                store.index('name'),
+                IDBKeyRange.upperBound(query),
+              );
+            }
+            case 'email': {
+              return executeQuery(
+                store.index('email'),
+                IDBKeyRange.upperBound(query),
+              );
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isBetween(query) {
+          switch (indexName) {
+            case 'id': {
+              return executeQuery(
+                store,
+                IDBKeyRange.bound(query.from, query.to),
+              );
+            }
+            case 'name': {
+              return executeQuery(
+                store.index('name'),
+                IDBKeyRange.bound(query.from, query.to),
+              );
+            }
+            case 'email': {
+              return executeQuery(
+                store.index('email'),
+                IDBKeyRange.bound(query.from, query.to),
+              );
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isEqualTo(query) {
+          switch (indexName) {
+            case 'id': {
+              return executeQuery(store, IDBKeyRange.only(query));
+            }
+            case 'name': {
+              return executeQuery(store.index('name'), IDBKeyRange.only(query));
+            }
+            case 'email': {
+              return executeQuery(
+                store.index('email'),
+                IDBKeyRange.only(query),
+              );
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+      };
     }
   }
   const authorsClient = new AuthorsClientImpl();
@@ -437,7 +621,9 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
               resolve(arg.author);
             } else {
               try {
-                const author = await authorsClient.put(arg.author);
+                const author = await authorsClient.put(arg.author, {
+                  transaction: tx,
+                });
                 resolve(author.id);
               } catch (error) {
                 reject(error);
@@ -504,7 +690,9 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
               resolve(arg.author);
             } else {
               try {
-                const author = await authorsClient.put(arg.author);
+                const author = await authorsClient.put(arg.author, {
+                  transaction: tx,
+                });
                 resolve(author.id);
               } catch (error) {
                 reject(error);
@@ -610,104 +798,13 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             if (DBGetRequest != null && DBGetRequest.result != null) {
               const post: Post = (DBGetRequest as IDBRequest).result;
               if (options?.withJoins != false) {
-                Promise.all([authorsClient.get(post.author)]).then(
-                  ([author]) => {
-                    resolve({
-                      ...post,
-                      author,
-                    });
-                  },
-                );
-              } else {
-                resolve(post);
-              }
-            } else {
-              reject(new Error('No result found for query'));
-            }
-          };
-        } else {
-          reject(new Error('No available index for given query'));
-        }
-      });
-    }
-    getAll(
-      arg?: PostsGetAllArgs,
-      options?: {
-        transaction?: IDBTransaction;
-        withJoins?: true;
-      },
-    ): Promise<ReadonlyArray<PostWithJoins>>;
-    getAll(
-      arg: PostsGetAllArgs,
-      options: {
-        transaction?: IDBTransaction;
-        withJoins: false;
-      },
-    ): Promise<ReadonlyArray<Post>>;
-    getAll(
-      arg?: PostsGetAllArgs,
-      options?: {
-        transaction?: IDBTransaction;
-        withJoins?: boolean;
-      },
-    ): Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>> {
-      return new Promise((resolve, reject) => {
-        const tx =
-          options?.transaction ?? options?.withJoins != false
-            ? db.transaction(
-                Array.from(
-                  new Set([
-                    ...AuthorsClientImpl.tablesForTransaction,
-                    ...PostsClientImpl.tablesForTransaction,
-                  ]),
-                ),
-                'readonly',
-              )
-            : db.transaction(['Posts'], 'readonly');
-        const store = tx.objectStore('Posts');
-        let DBGetRequest: IDBRequest | null = null;
-        if (isPostsPostIdIndex(arg)) {
-          DBGetRequest = store.getAll(arg.postId);
-        } else if (isPostsNameIndex(arg)) {
-          const index: IDBIndex = store.index('name');
-          DBGetRequest = index.getAll([arg.name]);
-        } else if (isPostsNameAuthorIndex(arg)) {
-          const index: IDBIndex = store.index('name_author');
-          DBGetRequest = index.getAll([arg.name, arg.author]);
-        } else if (isPostsAuthorIndex(arg)) {
-          const index: IDBIndex = store.index('author');
-          DBGetRequest = index.getAll([arg.author]);
-        } else {
-          DBGetRequest = store.getAll(arg);
-        }
-        if (DBGetRequest != null) {
-          DBGetRequest.onerror = () => {
-            if (DBGetRequest != null) {
-              reject(DBGetRequest.error);
-            } else {
-              reject(
-                new Error('Unknown error occurred trying to perform operation'),
-              );
-            }
-          };
-          DBGetRequest.onsuccess = () => {
-            if (DBGetRequest != null && DBGetRequest.result != null) {
-              const post: ReadonlyArray<Post> = (DBGetRequest as IDBRequest)
-                .result;
-              if (options?.withJoins != false) {
-                Promise.all(
-                  post.map((result) => {
-                    return Promise.all([authorsClient.get(result.author)]).then(
-                      ([author]) => {
-                        return {
-                          ...result,
-                          author,
-                        };
-                      },
-                    );
-                  }),
-                ).then((result: ReadonlyArray<PostWithJoins>) => {
-                  resolve(result);
+                Promise.all([
+                  authorsClient.get(post.author, { transaction: tx }),
+                ]).then(([author]) => {
+                  resolve({
+                    ...post,
+                    author,
+                  });
                 });
               } else {
                 resolve(post);
@@ -720,6 +817,374 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
           reject(new Error('No available index for given query'));
         }
       });
+    }
+    where<IndexName extends PostsIndexes>(
+      indexName: IndexName,
+      options?: {
+        transaction?: IDBTransaction;
+        withJoins?: true;
+      },
+    ): RangeQuery<
+      PostsWhereQueryType<IndexName>,
+      Promise<ReadonlyArray<PostWithJoins>>
+    >;
+    where<IndexName extends PostsIndexes>(
+      indexName: IndexName,
+      options: {
+        transaction?: IDBTransaction;
+        withJoins: false;
+      },
+    ): RangeQuery<PostsWhereQueryType<IndexName>, Promise<ReadonlyArray<Post>>>;
+    where<IndexName extends PostsIndexes>(
+      indexName: IndexName,
+      options?: {
+        transaction?: IDBTransaction;
+        withJoins?: boolean;
+      },
+    ): RangeQuery<
+      PostsWhereQueryType<IndexName>,
+      Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>>
+    > {
+      const tx =
+        options?.transaction ?? options?.withJoins != false
+          ? db.transaction(
+              Array.from(
+                new Set([
+                  ...AuthorsClientImpl.tablesForTransaction,
+                  ...PostsClientImpl.tablesForTransaction,
+                ]),
+              ),
+              'readonly',
+            )
+          : db.transaction(['Posts'], 'readonly');
+      const store = tx.objectStore('Posts');
+      const executeQuery = (
+        target: IDBObjectStore | IDBIndex,
+        range: IDBKeyRange,
+      ) => {
+        return new Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>>(
+          async (resolve, reject) => {
+            const DBGetRequest: IDBRequest = target.getAll(range);
+            if (DBGetRequest != null) {
+              DBGetRequest.onerror = () => {
+                if (DBGetRequest != null) {
+                  reject(DBGetRequest.error);
+                } else {
+                  reject(
+                    new Error(
+                      'Unknown error occurred trying to perform operation',
+                    ),
+                  );
+                }
+              };
+              DBGetRequest.onsuccess = () => {
+                if (DBGetRequest != null && DBGetRequest.result != null) {
+                  const post: ReadonlyArray<Post> = (DBGetRequest as IDBRequest)
+                    .result;
+                  if (options?.withJoins != false) {
+                    Promise.all(
+                      post.map((result) => {
+                        return Promise.all([
+                          authorsClient.get(result.author),
+                        ]).then(([author]) => {
+                          return {
+                            ...result,
+                            author,
+                          };
+                        });
+                      }),
+                    ).then((result: ReadonlyArray<PostWithJoins>) => {
+                      resolve(result);
+                    });
+                  } else {
+                    resolve(post);
+                  }
+                } else {
+                  reject(new Error('No result found for query'));
+                }
+              };
+            } else {
+              reject(new Error('No available index for given query'));
+            }
+          },
+        );
+      };
+      return {
+        isGreaterThan(query) {
+          switch (indexName) {
+            case 'postId': {
+              return executeQuery(store, IDBKeyRange.lowerBound(query));
+            }
+            case 'name': {
+              return executeQuery(
+                store.index('name'),
+                IDBKeyRange.lowerBound(query),
+              );
+            }
+            case 'name_author': {
+              return executeQuery(
+                store.index('name_author'),
+                IDBKeyRange.lowerBound([
+                  (
+                    query as {
+                      name: string;
+                      author: number;
+                    }
+                  ).name,
+                  (
+                    query as {
+                      name: string;
+                      author: number;
+                    }
+                  ).author,
+                ]),
+              );
+            }
+            case 'author': {
+              return executeQuery(
+                store.index('author'),
+                IDBKeyRange.lowerBound(query),
+              );
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isGreaterThanOrEqual(query) {
+          switch (indexName) {
+            case 'postId': {
+              return executeQuery(store, IDBKeyRange.lowerBound(query));
+            }
+            case 'name': {
+              return executeQuery(
+                store.index('name'),
+                IDBKeyRange.lowerBound(query),
+              );
+            }
+            case 'name_author': {
+              return executeQuery(
+                store.index('name_author'),
+                IDBKeyRange.lowerBound([
+                  (
+                    query as {
+                      name: string;
+                      author: number;
+                    }
+                  ).name,
+                  (
+                    query as {
+                      name: string;
+                      author: number;
+                    }
+                  ).author,
+                ]),
+              );
+            }
+            case 'author': {
+              return executeQuery(
+                store.index('author'),
+                IDBKeyRange.lowerBound(query),
+              );
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isLessThan(query) {
+          switch (indexName) {
+            case 'postId': {
+              return executeQuery(store, IDBKeyRange.upperBound(query));
+            }
+            case 'name': {
+              return executeQuery(
+                store.index('name'),
+                IDBKeyRange.upperBound(query),
+              );
+            }
+            case 'name_author': {
+              return executeQuery(
+                store.index('name_author'),
+                IDBKeyRange.upperBound([
+                  (
+                    query as {
+                      name: string;
+                      author: number;
+                    }
+                  ).name,
+                  (
+                    query as {
+                      name: string;
+                      author: number;
+                    }
+                  ).author,
+                ]),
+              );
+            }
+            case 'author': {
+              return executeQuery(
+                store.index('author'),
+                IDBKeyRange.upperBound(query),
+              );
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isLessThanOrEqual(query) {
+          switch (indexName) {
+            case 'postId': {
+              return executeQuery(store, IDBKeyRange.upperBound(query));
+            }
+            case 'name': {
+              return executeQuery(
+                store.index('name'),
+                IDBKeyRange.upperBound(query),
+              );
+            }
+            case 'name_author': {
+              return executeQuery(
+                store.index('name_author'),
+                IDBKeyRange.upperBound([
+                  (
+                    query as {
+                      name: string;
+                      author: number;
+                    }
+                  ).name,
+                  (
+                    query as {
+                      name: string;
+                      author: number;
+                    }
+                  ).author,
+                ]),
+              );
+            }
+            case 'author': {
+              return executeQuery(
+                store.index('author'),
+                IDBKeyRange.upperBound(query),
+              );
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isBetween(query) {
+          switch (indexName) {
+            case 'postId': {
+              return executeQuery(
+                store,
+                IDBKeyRange.bound(query.from, query.to),
+              );
+            }
+            case 'name': {
+              return executeQuery(
+                store.index('name'),
+                IDBKeyRange.bound(query.from, query.to),
+              );
+            }
+            case 'name_author': {
+              return executeQuery(
+                store.index('name_author'),
+                IDBKeyRange.bound(
+                  [
+                    (
+                      query.from as {
+                        name: string;
+                        author: number;
+                      }
+                    ).name,
+                    (
+                      query.from as {
+                        name: string;
+                        author: number;
+                      }
+                    ).author,
+                  ],
+                  [
+                    (
+                      query.to as {
+                        name: string;
+                        author: number;
+                      }
+                    ).name,
+                    (
+                      query.to as {
+                        name: string;
+                        author: number;
+                      }
+                    ).author,
+                  ],
+                ),
+              );
+            }
+            case 'author': {
+              return executeQuery(
+                store.index('author'),
+                IDBKeyRange.bound(query.from, query.to),
+              );
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isEqualTo(query) {
+          switch (indexName) {
+            case 'postId': {
+              return executeQuery(store, IDBKeyRange.only(query));
+            }
+            case 'name': {
+              return executeQuery(store.index('name'), IDBKeyRange.only(query));
+            }
+            case 'name_author': {
+              return executeQuery(
+                store.index('name_author'),
+                IDBKeyRange.only([
+                  (
+                    query as {
+                      name: string;
+                      author: number;
+                    }
+                  ).name,
+                  (
+                    query as {
+                      name: string;
+                      author: number;
+                    }
+                  ).author,
+                ]),
+              );
+            }
+            case 'author': {
+              return executeQuery(
+                store.index('author'),
+                IDBKeyRange.only(query),
+              );
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+      };
     }
   }
   const postsClient = new PostsClientImpl();
@@ -736,9 +1201,37 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
 }
 export function init(): Promise<MyDatabaseClient> {
   return new Promise((resolve, reject) => {
+    function createObjectStore(
+      db: IDBDatabase,
+      storeName: string,
+      options: IDBObjectStoreParameters,
+    ): IDBObjectStore {
+      if (DBOpenRequest.transaction == null) {
+        throw new Error(
+          'Error opening database. Open request transaction is null.',
+        );
+      }
+      if (db.objectStoreNames.contains(storeName)) {
+        return DBOpenRequest.transaction.objectStore(storeName);
+      } else {
+        return db.createObjectStore(storeName, options);
+      }
+    }
+    function createIndex(
+      store: IDBObjectStore,
+      indexName: string,
+      keyPath: Array<string>,
+      options: IDBIndexParameters,
+    ): void {
+      if (store.indexNames.contains(indexName)) {
+        return;
+      } else {
+        store.createIndex(indexName, keyPath, options);
+      }
+    }
     const DBOpenRequest = globalThis.indexedDB.open('MyDatabase', 3);
     DBOpenRequest.onerror = () => {
-      reject('Error opening database: MyDatabase');
+      reject(new Error('Error opening database: MyDatabase'));
     };
     DBOpenRequest.onsuccess = () => {
       const db = DBOpenRequest.result;
@@ -746,18 +1239,18 @@ export function init(): Promise<MyDatabaseClient> {
     };
     DBOpenRequest.onupgradeneeded = () => {
       const db = DBOpenRequest.result;
-      const AuthorsStore = db.createObjectStore('Authors', {
+      const AuthorsStore = createObjectStore(db, 'Authors', {
         keyPath: 'id',
         autoIncrement: true,
       });
-      const PostsStore = db.createObjectStore('Posts', { keyPath: 'postId' });
-      AuthorsStore.createIndex('name', ['name'], { unique: false });
-      AuthorsStore.createIndex('email', ['email'], { unique: true });
-      PostsStore.createIndex('name', ['name'], { unique: false });
-      PostsStore.createIndex('name_author', ['name', 'author'], {
+      const PostsStore = createObjectStore(db, 'Posts', { keyPath: 'postId' });
+      createIndex(AuthorsStore, 'name', ['name'], { unique: false });
+      createIndex(AuthorsStore, 'email', ['email'], { unique: true });
+      createIndex(PostsStore, 'name', ['name'], { unique: false });
+      createIndex(PostsStore, 'name_author', ['name', 'author'], {
         unique: false,
       });
-      PostsStore.createIndex('author', ['author'], { unique: false });
+      createIndex(PostsStore, 'author', ['author'], { unique: false });
     };
   });
 }

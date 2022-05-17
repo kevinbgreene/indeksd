@@ -137,6 +137,7 @@ export function createPutMethod(
         ts.factory.createReturnStatement(
           createNewPromiseWithBody(
             ts.factory.createToken(ts.SyntaxKind.AsyncKeyword),
+            undefined,
             ts.factory.createBlock(
               [
                 createTransactionWithMode({
@@ -159,7 +160,7 @@ export function createPutMethod(
   );
 }
 
-export function createPutMethodSignature(
+export function createPutMethodSignatureForTable(
   table: TableDefinition,
 ): ts.MethodSignature {
   return ts.factory.createMethodSignature(

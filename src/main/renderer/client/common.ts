@@ -8,7 +8,7 @@ import {
   getPrimaryKeyTypeForTableAsString,
 } from '../keys';
 import { getJoinsForTable, TableJoin } from '../joins';
-import { createConstStatement } from '../helpers';
+import { createConstStatement, createNewErrorWithMessage } from '../helpers';
 
 export function clientTypeNameForTable(def: TableDefinition): string {
   return `${capitalize(def.name.value)}Client`;
@@ -75,14 +75,8 @@ export function createOnErrorHandler(methodName: ts.Identifier): ts.Statement {
                       COMMON_IDENTIFIERS.reject,
                       undefined,
                       [
-                        ts.factory.createNewExpression(
-                          COMMON_IDENTIFIERS.Error,
-                          undefined,
-                          [
-                            ts.factory.createStringLiteral(
-                              'Unknown error occurred trying to perform operation',
-                            ),
-                          ],
+                        createNewErrorWithMessage(
+                          'Unknown error occurred trying to perform operation',
                         ),
                       ],
                     ),
@@ -149,7 +143,7 @@ export function createOnSuccessHandler(
                               primaryKeyField.name.value,
                               ts.factory.createPropertyAccessExpression(
                                 methodName,
-                                'result',
+                                COMMON_IDENTIFIERS.result,
                               ),
                             ),
                           ],
@@ -168,14 +162,8 @@ export function createOnSuccessHandler(
                       COMMON_IDENTIFIERS.reject,
                       undefined,
                       [
-                        ts.factory.createNewExpression(
-                          COMMON_IDENTIFIERS.Error,
-                          undefined,
-                          [
-                            ts.factory.createStringLiteral(
-                              'Operation produced a null result',
-                            ),
-                          ],
+                        createNewErrorWithMessage(
+                          'Operation produced a null result',
                         ),
                       ],
                     ),
@@ -315,14 +303,8 @@ function createNullHandlingForTableJoin(join: TableJoin): ts.Statement {
             COMMON_IDENTIFIERS.reject,
             undefined,
             [
-              ts.factory.createNewExpression(
-                COMMON_IDENTIFIERS.Error,
-                undefined,
-                [
-                  ts.factory.createStringLiteral(
-                    `Unknown error occurred while trying to join table: ${join.table.name.value}`,
-                  ),
-                ],
+              createNewErrorWithMessage(
+                `Unknown error occurred while trying to join table: ${join.table.name.value}`,
               ),
             ],
           ),
@@ -410,7 +392,7 @@ function createHandlingForTableJoin(join: TableJoin): ts.Expression {
                                 ts.factory.createIdentifier(
                                   clientVariableNameForTable(join.table),
                                 ),
-                                'put',
+                                COMMON_IDENTIFIERS.put,
                               ),
                               undefined,
                               [
@@ -418,6 +400,12 @@ function createHandlingForTableJoin(join: TableJoin): ts.Expression {
                                   COMMON_IDENTIFIERS.arg,
                                   join.fieldName,
                                 ),
+                                ts.factory.createObjectLiteralExpression([
+                                  ts.factory.createPropertyAssignment(
+                                    COMMON_IDENTIFIERS.transaction,
+                                    COMMON_IDENTIFIERS.tx,
+                                  ),
+                                ]),
                               ],
                             ),
                           ),

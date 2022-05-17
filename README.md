@@ -114,7 +114,7 @@ Supported annotations:
 - **@index** - Used on a field in a database to define that a given field should be an index. Takes an optional name argument that can be leveraged to define compound indexes.
 - **@autoincrement** - Used on a field to say it should be autoincrement primary key.
 - **@key** - Used on a field to define it as the primary key.
-- **@unique** - Used on a field to declare that values of that field should be unique for each entry.
+- **@unique** - Used on a field to declare that values of that field should be unique for each entry. This should be removed and added as an argument to the `@index` annotation.
 
 ### Example Schema using above
 
@@ -220,6 +220,32 @@ Note the return type of the `add` operation. It is the `Posts` type. That means 
 
 If there are nested joins used in a single `add` or `put` operation in order to get the primary key of objects added down the tree you would need to do those lookups yourself. For example, look up the added `Author` with the returned `id` and then look at the primary keys of anything inserted on that `Author`.
 
+## Range Queries
+
+The ability to get multiple items from the database is exposed through range queries. Range queries are performed by calling the `where` method.
+
+```
+const results: Array<PostsWithJoins> = await db.posts.where('id').isGreaterThan(4);
+const results: Array<PostsWithJoins> = await db.posts.where('id').isGreaterThanOrEqual(4);
+const results: Array<PostsWithJoins> = await db.posts.where('id').isLessThan(4);
+const results: Array<PostsWithJoins> = await db.posts.where('id').isLessThanOrEqual(4);
+const results: Array<PostsWithJoins> = await db.posts.where('id').isBetween({from: 1, to: 7});
+const results: Array<PostsWithJoins> = await db.posts.where('id').isEqualTo(4);
+```
+
+The `where` method takes an index (or key) from the database and returns an object that allows you to construct range queries on that index.
+
+The supported methods are:
+
+- `isGreaterThan` - Get all elements where given index is greater than provided argument.
+- `isGreaterThanOrEqual` - Get all elements where given index is greater than or equal to the provided argument.
+- `isLessThan` - Get all elements where given index is less than provided argument.
+- `isLessThanOrEqual` - Get all elements where given index is less than or equal to the provided argument.
+- `isBetween` - Get all elements where given index is between two arguments.
+- `isEqualTo` - Get all elements where given index is equal to the given argument.
+
+The returned methods are type safe based on the index name provided. For example, if the index you provide is of type `string` you can't pass a `number`.
+
 ## Client Operations
 
 Calling the exported `init` function returns our database client. This client currently only supports a subset of IndexedDB features.
@@ -230,7 +256,7 @@ Calling the exported `init` function returns our database client. This client cu
 
 ### get
 
-### getAll
+### where
 
 ### transaction
 

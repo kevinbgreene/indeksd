@@ -55,10 +55,6 @@ export function createAddArgsTypeNode(
   database: DatabaseDefinition,
 ): ts.TypeNode {
   const autoIncrementField = getAutoIncrementFieldForTable(table);
-  const typeReferencNode = ts.factory.createTypeReferenceNode(
-    getItemNameForTable(table),
-  );
-
   const fields: Array<ts.TypeElement> = [];
   const joins = getJoinsForTable(table, database);
 
@@ -163,6 +159,7 @@ export function createAddMethod(
         ts.factory.createReturnStatement(
           createNewPromiseWithBody(
             ts.factory.createToken(ts.SyntaxKind.AsyncKeyword),
+            undefined,
             ts.factory.createBlock(
               [
                 createTransactionWithMode({
@@ -185,7 +182,7 @@ export function createAddMethod(
   );
 }
 
-export function createAddMethodSignature(
+export function createAddMethodSignatureForTable(
   table: TableDefinition,
 ): ts.MethodSignature {
   return ts.factory.createMethodSignature(

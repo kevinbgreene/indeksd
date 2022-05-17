@@ -13,6 +13,10 @@ export function createTypeProperty(
   );
 }
 
+export function createNeverType(): ts.TypeNode {
+  return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.never);
+}
+
 export function createBooleanLiteral(val: boolean): ts.BooleanLiteral {
   return val ? ts.factory.createTrue() : ts.factory.createFalse();
 }
