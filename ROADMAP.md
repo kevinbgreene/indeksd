@@ -27,3 +27,16 @@ database TodoDatabase {
 - **Advanced Search** Support applying more complex predicates to table searches.
 
 - **Sorting** Currently searching on an index will naturally sort by that index... Allow sorting by arbitrary fields.
+
+- **Support Session and Local Storage** Could expand the schema to enable creation of type safe clients to store data in session and local storage. There would be different constraints, needing to be able to stringify objects as opposed to structured clone.
+
+Maybe something like...
+
+```
+session Todos = Array<{
+  name: string;
+  complete: boolean;
+}>;
+```
+
+- **Support Complex TypeScript Types** In the current form schemas can contain any JavaScript primitive type, anything that conforms to a TypeScript TypeReferenceNode with type parameters, object literal types and tuple types. This leaves out things like mapped types and conditional types.
