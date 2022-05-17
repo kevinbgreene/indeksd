@@ -61,6 +61,7 @@ export type AuthorsGetArgs =
   | {
       email: string;
     };
+export type AuthorsGetAllArgs = AuthorsGetArgs | undefined;
 export type PostsGetArgs =
   | string
   | {
@@ -76,8 +77,9 @@ export type PostsGetArgs =
   | {
       author: number;
     };
+export type PostsGetAllArgs = PostsGetArgs | undefined;
 const isAuthorsIdIndex = (
-  arg: AuthorsGetArgs,
+  arg?: AuthorsGetArgs,
 ): arg is {
   id: number;
 } => {
@@ -88,7 +90,7 @@ const isAuthorsIdIndex = (
   );
 };
 const isAuthorsNameIndex = (
-  arg: AuthorsGetArgs,
+  arg?: AuthorsGetArgs,
 ): arg is {
   name: string;
 } => {
@@ -99,7 +101,7 @@ const isAuthorsNameIndex = (
   );
 };
 const isAuthorsEmailIndex = (
-  arg: AuthorsGetArgs,
+  arg?: AuthorsGetArgs,
 ): arg is {
   email: string;
 } => {
@@ -110,7 +112,7 @@ const isAuthorsEmailIndex = (
   );
 };
 const isPostsPostIdIndex = (
-  arg: PostsGetArgs,
+  arg?: PostsGetArgs,
 ): arg is {
   postId: string;
 } => {
@@ -121,7 +123,7 @@ const isPostsPostIdIndex = (
   );
 };
 const isPostsNameIndex = (
-  arg: PostsGetArgs,
+  arg?: PostsGetArgs,
 ): arg is {
   name: string;
 } => {
@@ -132,7 +134,7 @@ const isPostsNameIndex = (
   );
 };
 const isPostsNameAuthorIndex = (
-  arg: PostsGetArgs,
+  arg?: PostsGetArgs,
 ): arg is {
   name: string;
   author: number;
@@ -145,7 +147,7 @@ const isPostsNameAuthorIndex = (
   );
 };
 const isPostsAuthorIndex = (
-  arg: PostsGetArgs,
+  arg?: PostsGetArgs,
 ): arg is {
   author: number;
 } => {
@@ -175,7 +177,7 @@ export type AuthorsClient = {
     },
   ): Promise<Authors>;
   getAll(
-    arg?: AuthorsGetArgs,
+    arg?: AuthorsGetAllArgs,
     options?: {
       transaction?: IDBTransaction;
     },
@@ -216,21 +218,21 @@ export type PostsClient = {
     },
   ): Promise<Post | PostWithJoins>;
   getAll(
-    arg?: PostsGetArgs,
+    arg?: PostsGetAllArgs,
     options?: {
       transaction?: IDBTransaction;
       withJoins?: true;
     },
   ): Promise<ReadonlyArray<PostWithJoins>>;
   getAll(
-    arg?: PostsGetArgs,
+    arg: PostsGetAllArgs,
     options: {
       transaction?: IDBTransaction;
       withJoins: false;
     },
   ): Promise<ReadonlyArray<Post>>;
   getAll(
-    arg?: PostsGetArgs,
+    arg?: PostsGetAllArgs,
     options?: {
       transaction?: IDBTransaction;
       withJoins?: boolean;
@@ -363,7 +365,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
       });
     }
     getAll(
-      arg?: AuthorsGetArgs,
+      arg?: AuthorsGetAllArgs,
       options?: {
         transaction?: IDBTransaction;
       },
@@ -629,21 +631,21 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
       });
     }
     getAll(
-      arg?: PostsGetArgs,
+      arg?: PostsGetAllArgs,
       options?: {
         transaction?: IDBTransaction;
         withJoins?: true;
       },
     ): Promise<ReadonlyArray<PostWithJoins>>;
     getAll(
-      arg?: PostsGetArgs,
+      arg: PostsGetAllArgs,
       options: {
         transaction?: IDBTransaction;
         withJoins: false;
       },
     ): Promise<ReadonlyArray<Post>>;
     getAll(
-      arg?: PostsGetArgs,
+      arg?: PostsGetAllArgs,
       options?: {
         transaction?: IDBTransaction;
         withJoins?: boolean;

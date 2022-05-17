@@ -1,4 +1,5 @@
 import { Definition, Identifier } from '../parser';
+import { getItemNameForTable } from '../renderer/common';
 
 export function definitionForIdentifier(
   id: Identifier,
@@ -11,11 +12,18 @@ export function definitionForIdentifier(
         if (result != null) {
           return result;
         }
+        break;
       case 'TableDefinition':
+        const itemName = getItemNameForTable(def);
+        if (itemName === id.value) {
+          return def;
+        }
+        break;
       case 'TypeDefinition':
         if (def.name.value === id.value) {
           return def;
         }
+        break;
     }
   }
 

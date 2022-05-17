@@ -23,7 +23,7 @@ import {
   TableJoin,
   typeNodeResolvingPrimaryKeys,
 } from '../joins';
-import { getItemNameForTable } from '../common';
+import { getItemNameForTable, getItemTypeForTable } from '../common';
 
 export function createGetArgsTypeName(table: TableDefinition): string {
   return `${capitalize(table.name.value)}GetArgs`;
@@ -31,6 +31,17 @@ export function createGetArgsTypeName(table: TableDefinition): string {
 
 export function createGetAllArgsTypeName(table: TableDefinition): string {
   return `${capitalize(table.name.value)}GetAllArgs`;
+}
+
+function typeReferenceForGetMethodByTable(
+  table: TableDefinition,
+  methodName: 'get' | 'getAll',
+): ts.TypeNode {
+  return ts.factory.createTypeReferenceNode(
+    methodName === 'get'
+      ? createGetArgsTypeName(table)
+      : createGetAllArgsTypeName(table),
+  );
 }
 
 export function createGetArgsTypeNode(table: TableDefinition): ts.TypeNode {
@@ -60,9 +71,7 @@ function createItemTypeNodeWithoutJoinsForTable({
   table: TableDefinition;
   asArray: boolean;
 }): ts.TypeNode {
-  const baseType = ts.factory.createTypeReferenceNode(
-    getItemNameForTable(table),
-  );
+  const baseType = getItemTypeForTable(table);
 
   if (asArray) {
     return ts.factory.createTypeReferenceNode(
@@ -117,7 +126,7 @@ export function createGetMethodSignaturesForTable({
         [
           createArgParamDeclaration(
             methodName === 'get',
-            ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+            typeReferenceForGetMethodByTable(table, methodName),
           ),
           createOptionsParamForGetMethod({ withJoins: 'true' }),
         ],
@@ -136,18 +145,7 @@ export function createGetMethodSignaturesForTable({
         [
           createArgParamDeclaration(
             true,
-            methodName === 'getAll'
-              ? ts.factory.createUnionTypeNode([
-                  ts.factory.createTypeReferenceNode(
-                    createGetArgsTypeName(table),
-                  ),
-                  ts.factory.createTypeReferenceNode(
-                    COMMON_IDENTIFIERS.undefined,
-                  ),
-                ])
-              : ts.factory.createTypeReferenceNode(
-                  createGetArgsTypeName(table),
-                ),
+            typeReferenceForGetMethodByTable(table, methodName),
           ),
           createOptionsParamForGetMethod({ withJoins: 'false' }),
         ],
@@ -166,7 +164,7 @@ export function createGetMethodSignaturesForTable({
         [
           createArgParamDeclaration(
             methodName === 'get',
-            ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+            typeReferenceForGetMethodByTable(table, methodName),
           ),
           createOptionsParamForGetMethod({ withJoins: 'default' }),
         ],
@@ -188,7 +186,7 @@ export function createGetMethodSignaturesForTable({
         [
           createArgParamDeclaration(
             methodName === 'get',
-            ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+            typeReferenceForGetMethodByTable(table, methodName),
           ),
           createOptionsParamForGetMethod({ withJoins: 'none' }),
         ],
@@ -299,7 +297,7 @@ export function createGetMethodDeclarations({
         [
           createArgParamDeclaration(
             methodName === 'get',
-            ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+            typeReferenceForGetMethodByTable(table, methodName),
           ),
           createOptionsParamForGetMethod({ withJoins: 'true' }),
         ],
@@ -321,18 +319,7 @@ export function createGetMethodDeclarations({
         [
           createArgParamDeclaration(
             true,
-            methodName === 'getAll'
-              ? ts.factory.createUnionTypeNode([
-                  ts.factory.createTypeReferenceNode(
-                    createGetArgsTypeName(table),
-                  ),
-                  ts.factory.createTypeReferenceNode(
-                    COMMON_IDENTIFIERS.undefined,
-                  ),
-                ])
-              : ts.factory.createTypeReferenceNode(
-                  createGetArgsTypeName(table),
-                ),
+            typeReferenceForGetMethodByTable(table, methodName),
           ),
           createOptionsParamForGetMethod({ withJoins: 'false' }),
         ],
@@ -354,7 +341,7 @@ export function createGetMethodDeclarations({
         [
           createArgParamDeclaration(
             methodName === 'get',
-            ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+            typeReferenceForGetMethodByTable(table, methodName),
           ),
           createOptionsParamForGetMethod({ withJoins: 'default' }),
         ],
@@ -379,7 +366,7 @@ export function createGetMethodDeclarations({
         [
           createArgParamDeclaration(
             methodName === 'get',
-            ts.factory.createTypeReferenceNode(createGetArgsTypeName(table)),
+            typeReferenceForGetMethodByTable(table, methodName),
           ),
           createOptionsParamForGetMethod({ withJoins: 'none' }),
         ],

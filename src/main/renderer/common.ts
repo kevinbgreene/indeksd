@@ -1,9 +1,14 @@
+import ts = require('typescript');
 import { TableDefinition } from '../parser';
 import { getAnnotationsByName } from './keys';
 import { capitalize } from './utils';
 
-export function getItemNameForTable(def: TableDefinition): string {
-  const itemAnnotations = getAnnotationsByName(def.annotations, 'item');
+export function getItemTypeForTable(table: TableDefinition): ts.TypeNode {
+  return ts.factory.createTypeReferenceNode(getItemNameForTable(table));
+}
+
+export function getItemNameForTable(table: TableDefinition): string {
+  const itemAnnotations = getAnnotationsByName(table.annotations, 'item');
   if (itemAnnotations.length > 1) {
     throw new Error('Table can only include one annotation for "item"');
   }
@@ -17,5 +22,5 @@ export function getItemNameForTable(def: TableDefinition): string {
     return itemArguments[0]?.value;
   }
 
-  return capitalize(def.name.value);
+  return capitalize(table.name.value);
 }
