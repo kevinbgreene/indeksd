@@ -9,11 +9,7 @@ import { getIndexesForTableAsArray, isPrimaryKey, TableIndex } from '../keys';
 import { createNeverType } from '../types';
 import { createTransactionWithMode } from './transaction';
 import { createGetObjectStore } from './objectStore';
-import {
-  createConstStatement,
-  createNewErrorWithMessage,
-  createNewPromiseWithBody,
-} from '../helpers';
+import { createConstStatement, createNewPromiseWithBody } from '../helpers';
 import {
   createSafeHandlingForRequest,
   createOptionsParamForGetMethod,
@@ -23,6 +19,7 @@ import {
 } from './getMethod';
 import { capitalize } from '../utils';
 import { getJoinsForTable, typeNodeResolvingPrimaryKeys } from '../joins';
+import { createDefaultClauseForIndexHandling } from './common';
 
 function createWhereQueryTypeName(table: TableDefinition): string {
   return `${capitalize(table.name.value)}WhereQueryType`;
@@ -277,36 +274,6 @@ function createExecuteQueryCallForCase({
   );
 }
 
-function createDefaultClauseForWhereHandling(): ts.DefaultClause {
-  return ts.factory.createDefaultClause([
-    ts.factory.createBlock(
-      [
-        ts.factory.createReturnStatement(
-          ts.factory.createCallExpression(
-            ts.factory.createPropertyAccessExpression(
-              COMMON_IDENTIFIERS.Promise,
-              COMMON_IDENTIFIERS.reject,
-            ),
-            undefined,
-            [
-              createNewErrorWithMessage(
-                ts.factory.createBinaryExpression(
-                  ts.factory.createStringLiteral(
-                    'Trying to run query on unknown index: ',
-                  ),
-                  ts.SyntaxKind.PlusToken,
-                  COMMON_IDENTIFIERS.indexName,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-      true,
-    ),
-  ]);
-}
-
 function createQueryParameterDeclaration(): ts.ParameterDeclaration {
   return ts.factory.createParameterDeclaration(
     undefined,
@@ -387,7 +354,7 @@ function createRangeQueryMethodImplementation({
                 ],
               );
             }),
-            createDefaultClauseForWhereHandling(),
+            createDefaultClauseForIndexHandling(),
           ]),
         ),
       ],
@@ -630,7 +597,7 @@ function createWhereMethodSignature({
     ],
     [
       createIndexNameParameterDeclaration(),
-      createOptionsParamForGetMethod({ withJoins }),
+      createOptionsParamForGetMethod({ withJoins, withCount: false }),
     ],
     createRangeQueryTypeReferenceForTable({
       table,
@@ -681,7 +648,7 @@ function createWhereMethodDeclaration({
     ],
     [
       createIndexNameParameterDeclaration(),
-      createOptionsParamForGetMethod({ withJoins }),
+      createOptionsParamForGetMethod({ withJoins, withCount: false }),
     ],
     createRangeQueryTypeReferenceForTable({
       table,

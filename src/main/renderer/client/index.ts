@@ -12,6 +12,7 @@ import {
 } from './common';
 import { createGetMethod } from './getMethod';
 import { createPutMethod } from './putMethod';
+import { createSortByMethod } from './sortByMethod';
 import { createParameterDeclarationsForTransaction } from './type';
 import { createWhereMethod } from './whereMethod';
 
@@ -41,6 +42,7 @@ function createClientDeclarationForTable(
         createPutMethod(table, database),
         ...createGetMethod(table, database),
         ...createWhereMethod(table, database),
+        ...createSortByMethod(table, database),
       ],
     ),
     createConstStatement(

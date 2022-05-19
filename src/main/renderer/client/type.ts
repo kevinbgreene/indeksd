@@ -8,9 +8,10 @@ import { createAddMethodSignatureForTable } from './addMethod';
 import { clientTypeNameForTable, createDatabaseClientName } from './common';
 import { createGetMethodSignaturesForTable } from './getMethod';
 import { createPutMethodSignatureForTable } from './putMethod';
+import { createSortByMethodSignaturesForTable } from './sortByMethod';
 import { createWhereMethodSignaturesForTable } from './whereMethod';
 
-type AvailableOptions =
+export type AvailableOptions =
   | 'transaction'
   | 'with_joins_true'
   | 'with_joins_false'
@@ -18,7 +19,7 @@ type AvailableOptions =
   | 'with_joins_default'
   | 'count';
 
-type OptionDeclarationArgs = Readonly<{
+export type OptionDeclarationArgs = Readonly<{
   optional: boolean;
   includes: ReadonlyArray<AvailableOptions>;
 }>;
@@ -134,6 +135,7 @@ export function createClientTypeDeclaration(
           createPutMethodSignatureForTable(table),
           ...createGetMethodSignaturesForTable(table, database),
           ...createWhereMethodSignaturesForTable(table, database),
+          ...createSortByMethodSignaturesForTable(table, database),
         ]),
       );
     }),

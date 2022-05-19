@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 
 export const COMMON_IDENTIFIERS = {
+  sortBy: ts.factory.createIdentifier('sortBy'),
   objectStore: ts.factory.createIdentifier('objectStore'),
   objectStoreNames: ts.factory.createIdentifier('objectStoreNames'),
   contains: ts.factory.createIdentifier('contains'),

@@ -214,6 +214,13 @@ export type AuthorsClient = {
     AuthorsWhereQueryType<IndexName>,
     Promise<ReadonlyArray<Authors>>
   >;
+  sortBy(
+    indexName: AuthorsIndexes,
+    options?: {
+      transaction?: IDBTransaction;
+      count?: number;
+    },
+  ): Promise<ReadonlyArray<Authors>>;
 };
 export type PostsClient = {
   add(
@@ -276,6 +283,30 @@ export type PostsClient = {
     PostsWhereQueryType<IndexName>,
     Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>>
   >;
+  sortBy(
+    indexName: PostsIndexes,
+    options?: {
+      transaction?: IDBTransaction;
+      withJoins?: true;
+      count?: number;
+    },
+  ): Promise<ReadonlyArray<PostWithJoins>>;
+  sortBy(
+    indexName: PostsIndexes,
+    options: {
+      transaction?: IDBTransaction;
+      withJoins: false;
+      count?: number;
+    },
+  ): Promise<ReadonlyArray<Post>>;
+  sortBy(
+    indexName: PostsIndexes,
+    options?: {
+      transaction?: IDBTransaction;
+      withJoins?: boolean;
+      count?: number;
+    },
+  ): Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>>;
 };
 export type MyDatabaseClient = {
   transaction: (
@@ -591,6 +622,62 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
           }
         },
       };
+    }
+    sortBy(
+      indexName: AuthorsIndexes,
+      options: {
+        transaction?: IDBTransaction;
+        withJoins: false;
+        count?: number;
+      },
+    ): Promise<ReadonlyArray<Authors>> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ?? db.transaction(['Authors'], 'readonly');
+        const store = tx.objectStore('Authors');
+        let DBGetRequest: IDBRequest | null = null;
+        switch (indexName) {
+          case 'id': {
+            DBGetRequest = store.getAll(undefined, options?.count);
+            break;
+          }
+          case 'name': {
+            const index: IDBIndex = store.index('name');
+            DBGetRequest = index.getAll(undefined, options?.count);
+            break;
+          }
+          case 'email': {
+            const index: IDBIndex = store.index('email');
+            DBGetRequest = index.getAll(undefined, options?.count);
+            break;
+          }
+          default: {
+            return Promise.reject(
+              new Error('Trying to run query on unknown index: ' + indexName),
+            );
+          }
+        }
+        if (DBGetRequest != null) {
+          DBGetRequest.onerror = () => {
+            if (DBGetRequest != null) {
+              reject(DBGetRequest.error);
+            } else {
+              reject(
+                new Error('Unknown error occurred trying to perform operation'),
+              );
+            }
+          };
+          DBGetRequest.onsuccess = () => {
+            if (DBGetRequest != null && DBGetRequest.result != null) {
+              resolve((DBGetRequest as IDBRequest).result);
+            } else {
+              reject(new Error('No result found for query'));
+            }
+          };
+        } else {
+          reject(new Error('No available index for given query'));
+        }
+      });
     }
   }
   const authorsClient = new AuthorsClientImpl();
@@ -1199,6 +1286,112 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
           }
         },
       };
+    }
+    sortBy(
+      indexName: PostsIndexes,
+      options?: {
+        transaction?: IDBTransaction;
+        withJoins?: true;
+        count?: number;
+      },
+    ): Promise<ReadonlyArray<PostWithJoins>>;
+    sortBy(
+      indexName: PostsIndexes,
+      options: {
+        transaction?: IDBTransaction;
+        withJoins: false;
+        count?: number;
+      },
+    ): Promise<ReadonlyArray<Post>>;
+    sortBy(
+      indexName: PostsIndexes,
+      options?: {
+        transaction?: IDBTransaction;
+        withJoins?: boolean;
+        count?: number;
+      },
+    ): Promise<ReadonlyArray<Post> | ReadonlyArray<PostWithJoins>> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ?? options?.withJoins != false
+            ? db.transaction(
+                Array.from(
+                  new Set([
+                    ...AuthorsClientImpl.tablesForTransaction,
+                    ...PostsClientImpl.tablesForTransaction,
+                  ]),
+                ),
+                'readonly',
+              )
+            : db.transaction(['Posts'], 'readonly');
+        const store = tx.objectStore('Posts');
+        let DBGetRequest: IDBRequest | null = null;
+        switch (indexName) {
+          case 'postId': {
+            DBGetRequest = store.getAll(undefined, options?.count);
+            break;
+          }
+          case 'name': {
+            const index: IDBIndex = store.index('name');
+            DBGetRequest = index.getAll(undefined, options?.count);
+            break;
+          }
+          case 'name_author': {
+            const index: IDBIndex = store.index('name_author');
+            DBGetRequest = index.getAll(undefined, options?.count);
+            break;
+          }
+          case 'author': {
+            const index: IDBIndex = store.index('author');
+            DBGetRequest = index.getAll(undefined, options?.count);
+            break;
+          }
+          default: {
+            return Promise.reject(
+              new Error('Trying to run query on unknown index: ' + indexName),
+            );
+          }
+        }
+        if (DBGetRequest != null) {
+          DBGetRequest.onerror = () => {
+            if (DBGetRequest != null) {
+              reject(DBGetRequest.error);
+            } else {
+              reject(
+                new Error('Unknown error occurred trying to perform operation'),
+              );
+            }
+          };
+          DBGetRequest.onsuccess = () => {
+            if (DBGetRequest != null && DBGetRequest.result != null) {
+              const post: ReadonlyArray<Post> = (DBGetRequest as IDBRequest)
+                .result;
+              if (options?.withJoins != false) {
+                Promise.all(
+                  post.map((result) => {
+                    return Promise.all([authorsClient.get(result.author)]).then(
+                      ([author]) => {
+                        return {
+                          ...result,
+                          author,
+                        };
+                      },
+                    );
+                  }),
+                ).then((result: ReadonlyArray<PostWithJoins>) => {
+                  resolve(result);
+                });
+              } else {
+                resolve(post);
+              }
+            } else {
+              reject(new Error('No result found for query'));
+            }
+          };
+        } else {
+          reject(new Error('No available index for given query'));
+        }
+      });
     }
   }
   const postsClient = new PostsClientImpl();

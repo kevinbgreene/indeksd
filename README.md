@@ -149,7 +149,7 @@ database Blob {
 
   table Posts {
     @autoincrement id: number;
-    title: string;
+    @index title: string;
     content: string;
     author: number;
   }
@@ -168,7 +168,7 @@ database Blob {
 
   table Posts {
     @autoincrement id: number;
-    title: string;
+    @index title: string;
     content: string;
     author: Author;
   }
@@ -220,7 +220,30 @@ Note the return type of the `add` operation. It is the `Posts` type. That means 
 
 If there are nested joins used in a single `add` or `put` operation in order to get the primary key of objects added down the tree you would need to do those lookups yourself. For example, look up the added `Author` with the returned `id` and then look at the primary keys of anything inserted on that `Author`.
 
-## Range Queries
+## Fetching Multiple Documents
+
+Currently there are two ways to fetch more than one item from the database.
+
+1. Using `sortBy` to fetch all entries from database sorted by a given index. This can be limited to a given count if you have a large data set.
+2. Using `RangeQuery` to fetch items in a given range. Range queries are exposed through the `where` method.
+
+### Sorted Get
+
+The `sortBy` method takes as an argument an index in the given store and will return all entries sorted by that index.
+
+To get all `Posts` sorted by `title`.
+
+```
+const posts: Array<PostsWithJoins> = await db.posts.sortBy('title');
+```
+
+The `sortBy` method takes an optional second parameter that will allow you to limit the number of items returned.
+
+```
+const posts: Array<PostsWithJoins> = await db.posts.sortBy('title', { count: 10 });
+```
+
+### Range Queries
 
 The ability to get multiple items from the database is exposed through range queries. Range queries are performed by calling the `where` method.
 

@@ -17,7 +17,7 @@ import { capitalize } from '../utils';
 import { clientVariableNameForTable, createOnErrorHandler } from './common';
 import { createGetObjectStore } from './objectStore';
 import { createTransactionWithMode } from './transaction';
-import { createOptionsParameterDeclaration } from './type';
+import { AvailableOptions, createOptionsParameterDeclaration } from './type';
 import {
   getItemNameWithJoinsForTable,
   getJoinsForTable,
@@ -25,6 +25,8 @@ import {
   typeNodeResolvingPrimaryKeys,
 } from '../joins';
 import { getItemNameForTable, getItemTypeForTable } from '../common';
+
+export type GetMethodName = 'get' | 'getAll';
 
 export function createGetArgsTypeName(table: TableDefinition): string {
   return `${capitalize(table.name.value)}GetArgs`;
@@ -94,6 +96,31 @@ function createItemTypeNodeWithJoinsForTable({
   }
 }
 
+function createGetMethodSignatureForTable({
+  table,
+  withJoins,
+}: {
+  table: TableDefinition;
+  withJoins: WithJoins;
+}): ts.MethodSignature {
+  return ts.factory.createMethodSignature(
+    undefined,
+    COMMON_IDENTIFIERS.get,
+    undefined,
+    undefined,
+    [
+      createArgParamDeclaration(true, typeReferenceForGetMethodByTable(table)),
+      createOptionsParamForGetMethod({ withJoins, withCount: false }),
+    ],
+    createGetMethodReturnTypeForTable({
+      table,
+      asUnion: withJoins === 'default',
+      withJoins: withJoins === 'true' || withJoins === 'default',
+      asArray: false,
+    }),
+  );
+}
+
 export function createGetMethodSignaturesForTable(
   table: TableDefinition,
   database: DatabaseDefinition,
@@ -102,86 +129,12 @@ export function createGetMethodSignaturesForTable(
 
   if (joins.length > 0) {
     return [
-      ts.factory.createMethodSignature(
-        undefined,
-        COMMON_IDENTIFIERS.get,
-        undefined,
-        undefined,
-        [
-          createArgParamDeclaration(
-            true,
-            typeReferenceForGetMethodByTable(table),
-          ),
-          createOptionsParamForGetMethod({ withJoins: 'true' }),
-        ],
-        createGetMethodReturnTypeForTable({
-          table,
-          asUnion: false,
-          withJoins: true,
-          asArray: false,
-        }),
-      ),
-      ts.factory.createMethodSignature(
-        undefined,
-        COMMON_IDENTIFIERS.get,
-        undefined,
-        undefined,
-        [
-          createArgParamDeclaration(
-            true,
-            typeReferenceForGetMethodByTable(table),
-          ),
-          createOptionsParamForGetMethod({ withJoins: 'false' }),
-        ],
-        createGetMethodReturnTypeForTable({
-          table,
-          asUnion: false,
-          withJoins: false,
-          asArray: false,
-        }),
-      ),
-      ts.factory.createMethodSignature(
-        undefined,
-        COMMON_IDENTIFIERS.get,
-        undefined,
-        undefined,
-        [
-          createArgParamDeclaration(
-            true,
-            typeReferenceForGetMethodByTable(table),
-          ),
-          createOptionsParamForGetMethod({ withJoins: 'default' }),
-        ],
-        createGetMethodReturnTypeForTable({
-          table,
-          asUnion: true,
-          withJoins: true,
-          asArray: false,
-        }),
-      ),
+      createGetMethodSignatureForTable({ table, withJoins: 'true' }),
+      createGetMethodSignatureForTable({ table, withJoins: 'false' }),
+      createGetMethodSignatureForTable({ table, withJoins: 'default' }),
     ];
   } else {
-    return [
-      ts.factory.createMethodSignature(
-        undefined,
-        COMMON_IDENTIFIERS.get,
-        undefined,
-        undefined,
-        [
-          createArgParamDeclaration(
-            true,
-            typeReferenceForGetMethodByTable(table),
-          ),
-          createOptionsParamForGetMethod({ withJoins: 'none' }),
-        ],
-        createGetMethodReturnTypeForTable({
-          table,
-          asUnion: false,
-          withJoins: false,
-          asArray: false,
-        }),
-      ),
-    ];
+    return [createGetMethodSignatureForTable({ table, withJoins: 'none' })];
   }
 }
 
@@ -189,31 +142,35 @@ export type WithJoins = 'true' | 'false' | 'none' | 'default';
 
 export function createOptionsParamForGetMethod({
   withJoins,
+  withCount,
 }: {
   withJoins: WithJoins;
+  withCount: boolean;
 }): ts.ParameterDeclaration {
+  const includes: Array<AvailableOptions> = ['transaction'];
+
   switch (withJoins) {
     case 'true':
-      return createOptionsParameterDeclaration({
-        optional: true,
-        includes: ['transaction', 'with_joins_true'],
-      });
+      includes.push('with_joins_true');
+      break;
     case 'false':
-      return createOptionsParameterDeclaration({
-        optional: false,
-        includes: ['transaction', 'with_joins_false'],
-      });
+      includes.push('with_joins_false');
+      break;
     case 'none':
-      return createOptionsParameterDeclaration({
-        optional: true,
-        includes: ['transaction'],
-      });
+      break;
     default:
-      return createOptionsParameterDeclaration({
-        optional: true,
-        includes: ['transaction', 'with_joins_default'],
-      });
+      includes.push('with_joins_default');
+      break;
   }
+
+  if (withCount) {
+    includes.push('count');
+  }
+
+  return createOptionsParameterDeclaration({
+    optional: withJoins != 'false',
+    includes,
+  });
 }
 
 export function createArgParamDeclaration(
@@ -259,11 +216,39 @@ export function createGetMethodReturnTypeForTable(args: {
   withJoins: boolean;
   asArray: boolean;
 }): ts.TypeNode {
-  const baseType = createGetMethodBaseReturnTypeForTable(args);
-
   return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.Promise, [
-    baseType,
+    createGetMethodBaseReturnTypeForTable(args),
   ]);
+}
+
+function createGetMethodDeclaration({
+  table,
+  withJoins,
+  methodBody,
+}: {
+  table: TableDefinition;
+  withJoins: WithJoins;
+  methodBody?: ts.Block;
+}): ts.MethodDeclaration {
+  return ts.factory.createMethodDeclaration(
+    undefined,
+    undefined,
+    undefined,
+    COMMON_IDENTIFIERS.get,
+    undefined,
+    undefined,
+    [
+      createArgParamDeclaration(true, typeReferenceForGetMethodByTable(table)),
+      createOptionsParamForGetMethod({ withJoins, withCount: false }),
+    ],
+    createGetMethodReturnTypeForTable({
+      table,
+      asUnion: withJoins === 'default',
+      withJoins: withJoins === 'true' || withJoins === 'default',
+      asArray: false,
+    }),
+    methodBody,
+  );
 }
 
 export function createGetMethodDeclarations({
@@ -279,97 +264,27 @@ export function createGetMethodDeclarations({
 
   if (joins.length > 0) {
     return [
-      ts.factory.createMethodDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.get,
-        undefined,
-        undefined,
-        [
-          createArgParamDeclaration(
-            true,
-            typeReferenceForGetMethodByTable(table),
-          ),
-          createOptionsParamForGetMethod({ withJoins: 'true' }),
-        ],
-        createGetMethodReturnTypeForTable({
-          table,
-          asUnion: false,
-          withJoins: true,
-          asArray: false,
-        }),
-        undefined,
-      ),
-      ts.factory.createMethodDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.get,
-        undefined,
-        undefined,
-        [
-          createArgParamDeclaration(
-            true,
-            typeReferenceForGetMethodByTable(table),
-          ),
-          createOptionsParamForGetMethod({ withJoins: 'false' }),
-        ],
-        createGetMethodReturnTypeForTable({
-          table,
-          asUnion: false,
-          withJoins: false,
-          asArray: false,
-        }),
-        undefined,
-      ),
-      ts.factory.createMethodDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.get,
-        undefined,
-        undefined,
-        [
-          createArgParamDeclaration(
-            true,
-            typeReferenceForGetMethodByTable(table),
-          ),
-          createOptionsParamForGetMethod({ withJoins: 'default' }),
-        ],
-        createGetMethodReturnTypeForTable({
-          table,
-          asUnion: true,
-          withJoins: true,
-          asArray: false,
-        }),
+      createGetMethodDeclaration({
+        table,
+        withJoins: 'true',
+      }),
+      createGetMethodDeclaration({
+        table,
+        withJoins: 'false',
+      }),
+      createGetMethodDeclaration({
+        table,
+        withJoins: 'default',
         methodBody,
-      ),
+      }),
     ];
   } else {
     return [
-      ts.factory.createMethodDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.get,
-        undefined,
-        undefined,
-        [
-          createArgParamDeclaration(
-            true,
-            typeReferenceForGetMethodByTable(table),
-          ),
-          createOptionsParamForGetMethod({ withJoins: 'none' }),
-        ],
-        createGetMethodReturnTypeForTable({
-          table,
-          asUnion: false,
-          withJoins: false,
-          asArray: false,
-        }),
+      createGetMethodDeclaration({
+        table,
+        withJoins: 'none',
         methodBody,
-      ),
+      }),
     ];
   }
 }
@@ -408,6 +323,47 @@ export function createGetMethod(
   });
 }
 
+export function createHandlingForGetByIndex({
+  tableIndex,
+  methodName,
+  argumentsArray,
+}: {
+  tableIndex: TableIndex;
+  methodName: GetMethodName;
+  argumentsArray: ReadonlyArray<ts.Expression>;
+}): ReadonlyArray<ts.Statement> {
+  return [
+    createConstStatement(
+      COMMON_IDENTIFIERS.index,
+      ts.factory.createTypeReferenceNode(
+        COMMON_IDENTIFIERS.IDBIndex,
+        undefined,
+      ),
+      ts.factory.createCallExpression(
+        ts.factory.createPropertyAccessExpression(
+          COMMON_IDENTIFIERS.store,
+          COMMON_IDENTIFIERS.index,
+        ),
+        undefined,
+        [ts.factory.createStringLiteral(tableIndex.name)],
+      ),
+    ),
+    ts.factory.createExpressionStatement(
+      ts.factory.createAssignment(
+        COMMON_IDENTIFIERS.DBGetRequest,
+        ts.factory.createCallExpression(
+          ts.factory.createPropertyAccessExpression(
+            COMMON_IDENTIFIERS.index,
+            ts.factory.createIdentifier(methodName),
+          ),
+          undefined,
+          argumentsArray,
+        ),
+      ),
+    ),
+  ];
+}
+
 function createHandlingForIndexGet({
   table,
   tableIndex,
@@ -417,7 +373,7 @@ function createHandlingForIndexGet({
 }: {
   table: TableDefinition;
   tableIndex: TableIndex;
-  methodName: 'get' | 'getAll';
+  methodName: GetMethodName;
   remaining: ReadonlyArray<TableIndex>;
   keys: ReadonlyArray<TableIndex>;
 }): ts.IfStatement {
@@ -431,40 +387,20 @@ function createHandlingForIndexGet({
     ),
     ts.factory.createBlock(
       [
-        createConstStatement(
-          COMMON_IDENTIFIERS.index,
-          ts.factory.createTypeReferenceNode('IDBIndex', undefined),
-          ts.factory.createCallExpression(
-            ts.factory.createPropertyAccessExpression(
-              COMMON_IDENTIFIERS.store,
-              COMMON_IDENTIFIERS.index,
+        ...createHandlingForGetByIndex({
+          tableIndex,
+          methodName,
+          argumentsArray: [
+            ts.factory.createArrayLiteralExpression(
+              tableIndex.fields.map((next) => {
+                return ts.factory.createPropertyAccessExpression(
+                  COMMON_IDENTIFIERS.arg,
+                  next.name.value,
+                );
+              }),
             ),
-            undefined,
-            [ts.factory.createStringLiteral(tableIndex.name)],
-          ),
-        ),
-        ts.factory.createExpressionStatement(
-          ts.factory.createAssignment(
-            COMMON_IDENTIFIERS.DBGetRequest,
-            ts.factory.createCallExpression(
-              ts.factory.createPropertyAccessExpression(
-                COMMON_IDENTIFIERS.index,
-                ts.factory.createIdentifier(methodName),
-              ),
-              undefined,
-              [
-                ts.factory.createArrayLiteralExpression(
-                  tableIndex.fields.map((next) => {
-                    return ts.factory.createPropertyAccessExpression(
-                      COMMON_IDENTIFIERS.arg,
-                      next.name.value,
-                    );
-                  }),
-                ),
-              ],
-            ),
-          ),
-        ),
+          ],
+        }),
       ],
       true,
     ),
@@ -474,6 +410,30 @@ function createHandlingForIndexGet({
       keys,
     })[0],
   );
+}
+
+export function createHandlingForGetByPrimaryKey({
+  methodName,
+  argumentsArray,
+}: {
+  methodName: GetMethodName;
+  argumentsArray: ReadonlyArray<ts.Expression>;
+}): ReadonlyArray<ts.Statement> {
+  return [
+    ts.factory.createExpressionStatement(
+      ts.factory.createAssignment(
+        COMMON_IDENTIFIERS.DBGetRequest,
+        ts.factory.createCallExpression(
+          ts.factory.createPropertyAccessExpression(
+            COMMON_IDENTIFIERS.store,
+            ts.factory.createIdentifier(methodName),
+          ),
+          undefined,
+          argumentsArray,
+        ),
+      ),
+    ),
+  ];
 }
 
 function createHandlingForPrimaryKeyGet({
@@ -497,24 +457,15 @@ function createHandlingForPrimaryKeyGet({
     ),
     ts.factory.createBlock(
       [
-        ts.factory.createExpressionStatement(
-          ts.factory.createAssignment(
-            COMMON_IDENTIFIERS.DBGetRequest,
-            ts.factory.createCallExpression(
-              ts.factory.createPropertyAccessExpression(
-                COMMON_IDENTIFIERS.store,
-                COMMON_IDENTIFIERS.get,
-              ),
-              undefined,
-              [
-                ts.factory.createPropertyAccessExpression(
-                  COMMON_IDENTIFIERS.arg,
-                  tableIndex.name,
-                ),
-              ],
+        ...createHandlingForGetByPrimaryKey({
+          methodName: 'get',
+          argumentsArray: [
+            ts.factory.createPropertyAccessExpression(
+              COMMON_IDENTIFIERS.arg,
+              tableIndex.name,
             ),
-          ),
-        ),
+          ],
+        }),
       ],
       true,
     ),
@@ -590,7 +541,7 @@ export function createSafeHandlingForRequest({
 }: {
   table: TableDefinition;
   database: DatabaseDefinition;
-  methodName: 'get' | 'getAll';
+  methodName: GetMethodName;
 }) {
   return ts.factory.createIfStatement(
     ts.factory.createBinaryExpression(
@@ -620,6 +571,20 @@ export function createSafeHandlingForRequest({
   );
 }
 
+export function createDBGetRequestVariable(): ts.Statement {
+  return createLetStatement(
+    COMMON_IDENTIFIERS.DBGetRequest,
+    ts.factory.createUnionTypeNode([
+      ts.factory.createTypeReferenceNode(
+        COMMON_IDENTIFIERS.IDBRequest,
+        undefined,
+      ),
+      ts.factory.createLiteralTypeNode(ts.factory.createNull()),
+    ]),
+    ts.factory.createNull(),
+  );
+}
+
 function createIndexNarrowing(
   table: TableDefinition,
   database: DatabaseDefinition,
@@ -629,17 +594,7 @@ function createIndexNarrowing(
   const keys = tableIndexes.filter((next) => next.kind !== 'index');
 
   return [
-    createLetStatement(
-      COMMON_IDENTIFIERS.DBGetRequest,
-      ts.factory.createUnionTypeNode([
-        ts.factory.createTypeReferenceNode(
-          COMMON_IDENTIFIERS.IDBRequest,
-          undefined,
-        ),
-        ts.factory.createLiteralTypeNode(ts.factory.createNull()),
-      ]),
-      ts.factory.createNull(),
-    ),
+    createDBGetRequestVariable(),
     ...createConditionsForIndexes({ table, tableIndexes, keys }),
     createSafeHandlingForRequest({ table, database, methodName: 'get' }),
   ];
@@ -833,7 +788,7 @@ export function createGetArgsTypeDeclaration(
 export function createOnSuccessHandlerForGetMethod(
   table: TableDefinition,
   database: DatabaseDefinition,
-  methodName: 'get' | 'getAll',
+  methodName: GetMethodName,
 ): ts.Statement {
   return ts.factory.createExpressionStatement(
     ts.factory.createAssignment(
@@ -876,7 +831,7 @@ function resultVariableName(table: TableDefinition): ts.Identifier {
 function createFieldResolution(
   table: TableDefinition,
   database: DatabaseDefinition,
-  methodName: 'get' | 'getAll',
+  methodName: GetMethodName,
 ): ts.Statement {
   const joins: ReadonlyArray<TableJoin> = getJoinsForTable(table, database);
   const isGetAll = methodName === 'getAll';
