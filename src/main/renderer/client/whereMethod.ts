@@ -224,10 +224,12 @@ function createExecuteQueryCallForCase({
   database,
   tableIndex,
   queryMethod,
+  inclusive,
 }: {
   database: DatabaseDefinition;
   tableIndex: TableIndex;
   queryMethod: QueryMethod;
+  inclusive: boolean;
 }): ts.Statement {
   const query: ReadonlyArray<ts.Expression> =
     queryMethod === 'bound'
@@ -235,6 +237,17 @@ function createExecuteQueryCallForCase({
       : tableIndex.fields.length > 1
       ? createCompoundQuery(database, tableIndex)
       : [COMMON_IDENTIFIERS.query];
+
+  const options: ReadonlyArray<ts.Expression> =
+    queryMethod === 'bound'
+      ? inclusive
+        ? [ts.factory.createFalse(), ts.factory.createFalse()]
+        : [ts.factory.createTrue(), ts.factory.createTrue()]
+      : queryMethod === 'only'
+      ? []
+      : inclusive
+      ? [ts.factory.createFalse()]
+      : [ts.factory.createTrue()];
 
   return ts.factory.createReturnStatement(
     ts.factory.createCallExpression(
@@ -257,7 +270,7 @@ function createExecuteQueryCallForCase({
             queryMethod,
           ),
           undefined,
-          query,
+          [...query, ...options],
         ),
       ],
     ),
@@ -307,18 +320,27 @@ function createQueryParameterDeclaration(): ts.ParameterDeclaration {
 
 const METHOD_MAP = {
   isGreaterThan: 'lowerBound',
-  isGreaterThanOrEqual: 'lowerBound',
+  isGreaterThanOrEqualTo: 'lowerBound',
   isLessThan: 'upperBound',
-  isLessThanOrEqual: 'upperBound',
+  isLessThanOrEqualTo: 'upperBound',
   isBetween: 'bound',
   isEqualTo: 'only',
 } as const;
 
+const INCLUSIVE_MAP = {
+  isGreaterThan: false,
+  isGreaterThanOrEqualTo: true,
+  isLessThan: false,
+  isLessThanOrEqualTo: true,
+  isBetween: true,
+  isEqualTo: true,
+} as const;
+
 type MethodName =
   | 'isGreaterThan'
-  | 'isGreaterThanOrEqual'
+  | 'isGreaterThanOrEqualTo'
   | 'isLessThan'
-  | 'isLessThanOrEqual'
+  | 'isLessThanOrEqualTo'
   | 'isBetween'
   | 'isEqualTo';
 
@@ -332,6 +354,7 @@ function createRangeQueryMethodImplementation({
   methodName: MethodName;
 }): ts.MethodDeclaration {
   const nativeMethod = METHOD_MAP[methodName];
+  const isInclusive = INCLUSIVE_MAP[methodName];
   return ts.factory.createMethodDeclaration(
     undefined,
     undefined,
@@ -356,6 +379,7 @@ function createRangeQueryMethodImplementation({
                         database,
                         tableIndex: next,
                         queryMethod: nativeMethod,
+                        inclusive: isInclusive,
                       }),
                     ],
                     true,
@@ -388,7 +412,7 @@ function createRangeQueryImplementation(
       createRangeQueryMethodImplementation({
         database,
         indexes,
-        methodName: 'isGreaterThanOrEqual',
+        methodName: 'isGreaterThanOrEqualTo',
       }),
       createRangeQueryMethodImplementation({
         database,
@@ -398,7 +422,7 @@ function createRangeQueryImplementation(
       createRangeQueryMethodImplementation({
         database,
         indexes,
-        methodName: 'isLessThanOrEqual',
+        methodName: 'isLessThanOrEqualTo',
       }),
       createRangeQueryMethodImplementation({
         database,
@@ -519,9 +543,9 @@ function createRangeQueryMethodSignature(
 function createRangeQueryTypeNode(): ts.TypeNode {
   return ts.factory.createTypeLiteralNode([
     createRangeQueryMethodSignature('isGreaterThan'),
-    createRangeQueryMethodSignature('isGreaterThanOrEqual'),
+    createRangeQueryMethodSignature('isGreaterThanOrEqualTo'),
     createRangeQueryMethodSignature('isLessThan'),
-    createRangeQueryMethodSignature('isLessThanOrEqual'),
+    createRangeQueryMethodSignature('isLessThanOrEqualTo'),
     createRangeQueryMethodSignature('isBetween'),
     createRangeQueryMethodSignature('isEqualTo'),
   ]);

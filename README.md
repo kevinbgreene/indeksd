@@ -238,9 +238,9 @@ The `where` method takes an index (or key) from the database and returns an obje
 The supported methods are:
 
 - `isGreaterThan` - Get all elements where given index is greater than provided argument.
-- `isGreaterThanOrEqual` - Get all elements where given index is greater than or equal to the provided argument.
+- `isGreaterThanOrEqualTo` - Get all elements where given index is greater than or equal to the provided argument.
 - `isLessThan` - Get all elements where given index is less than provided argument.
-- `isLessThanOrEqual` - Get all elements where given index is less than or equal to the provided argument.
+- `isLessThanOrEqualTo` - Get all elements where given index is less than or equal to the provided argument.
 - `isBetween` - Get all elements where given index is between two arguments.
 - `isEqualTo` - Get all elements where given index is equal to the given argument.
 

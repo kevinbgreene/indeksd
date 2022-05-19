@@ -180,9 +180,9 @@ const isPostsAuthorIndex = (
 };
 type RangeQuery<ArgType, ReturnType> = {
   isGreaterThan(arg: ArgType): ReturnType;
-  isGreaterThanOrEqual(arg: ArgType): ReturnType;
+  isGreaterThanOrEqualTo(arg: ArgType): ReturnType;
   isLessThan(arg: ArgType): ReturnType;
-  isLessThanOrEqual(arg: ArgType): ReturnType;
+  isLessThanOrEqualTo(arg: ArgType): ReturnType;
   isBetween(arg: { from: ArgType; to: ArgType }): ReturnType;
   isEqualTo(arg: ArgType): ReturnType;
 };
@@ -449,18 +449,18 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         isGreaterThan(query) {
           switch (indexName) {
             case 'id': {
-              return executeQuery(store, IDBKeyRange.lowerBound(query));
+              return executeQuery(store, IDBKeyRange.lowerBound(query, true));
             }
             case 'name': {
               return executeQuery(
                 store.index('name'),
-                IDBKeyRange.lowerBound(query),
+                IDBKeyRange.lowerBound(query, true),
               );
             }
             case 'email': {
               return executeQuery(
                 store.index('email'),
-                IDBKeyRange.lowerBound(query),
+                IDBKeyRange.lowerBound(query, true),
               );
             }
             default: {
@@ -470,21 +470,21 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             }
           }
         },
-        isGreaterThanOrEqual(query) {
+        isGreaterThanOrEqualTo(query) {
           switch (indexName) {
             case 'id': {
-              return executeQuery(store, IDBKeyRange.lowerBound(query));
+              return executeQuery(store, IDBKeyRange.lowerBound(query, false));
             }
             case 'name': {
               return executeQuery(
                 store.index('name'),
-                IDBKeyRange.lowerBound(query),
+                IDBKeyRange.lowerBound(query, false),
               );
             }
             case 'email': {
               return executeQuery(
                 store.index('email'),
-                IDBKeyRange.lowerBound(query),
+                IDBKeyRange.lowerBound(query, false),
               );
             }
             default: {
@@ -497,18 +497,18 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         isLessThan(query) {
           switch (indexName) {
             case 'id': {
-              return executeQuery(store, IDBKeyRange.upperBound(query));
+              return executeQuery(store, IDBKeyRange.upperBound(query, true));
             }
             case 'name': {
               return executeQuery(
                 store.index('name'),
-                IDBKeyRange.upperBound(query),
+                IDBKeyRange.upperBound(query, true),
               );
             }
             case 'email': {
               return executeQuery(
                 store.index('email'),
-                IDBKeyRange.upperBound(query),
+                IDBKeyRange.upperBound(query, true),
               );
             }
             default: {
@@ -518,21 +518,21 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             }
           }
         },
-        isLessThanOrEqual(query) {
+        isLessThanOrEqualTo(query) {
           switch (indexName) {
             case 'id': {
-              return executeQuery(store, IDBKeyRange.upperBound(query));
+              return executeQuery(store, IDBKeyRange.upperBound(query, false));
             }
             case 'name': {
               return executeQuery(
                 store.index('name'),
-                IDBKeyRange.upperBound(query),
+                IDBKeyRange.upperBound(query, false),
               );
             }
             case 'email': {
               return executeQuery(
                 store.index('email'),
-                IDBKeyRange.upperBound(query),
+                IDBKeyRange.upperBound(query, false),
               );
             }
             default: {
@@ -547,19 +547,19 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             case 'id': {
               return executeQuery(
                 store,
-                IDBKeyRange.bound(query.from, query.to),
+                IDBKeyRange.bound(query.from, query.to, false, false),
               );
             }
             case 'name': {
               return executeQuery(
                 store.index('name'),
-                IDBKeyRange.bound(query.from, query.to),
+                IDBKeyRange.bound(query.from, query.to, false, false),
               );
             }
             case 'email': {
               return executeQuery(
                 store.index('email'),
-                IDBKeyRange.bound(query.from, query.to),
+                IDBKeyRange.bound(query.from, query.to, false, false),
               );
             }
             default: {
@@ -913,37 +913,40 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         isGreaterThan(query) {
           switch (indexName) {
             case 'postId': {
-              return executeQuery(store, IDBKeyRange.lowerBound(query));
+              return executeQuery(store, IDBKeyRange.lowerBound(query, true));
             }
             case 'name': {
               return executeQuery(
                 store.index('name'),
-                IDBKeyRange.lowerBound(query),
+                IDBKeyRange.lowerBound(query, true),
               );
             }
             case 'name_author': {
               return executeQuery(
                 store.index('name_author'),
-                IDBKeyRange.lowerBound([
-                  (
-                    query as {
-                      name: string;
-                      author: number;
-                    }
-                  ).name,
-                  (
-                    query as {
-                      name: string;
-                      author: number;
-                    }
-                  ).author,
-                ]),
+                IDBKeyRange.lowerBound(
+                  [
+                    (
+                      query as {
+                        name: string;
+                        author: number;
+                      }
+                    ).name,
+                    (
+                      query as {
+                        name: string;
+                        author: number;
+                      }
+                    ).author,
+                  ],
+                  true,
+                ),
               );
             }
             case 'author': {
               return executeQuery(
                 store.index('author'),
-                IDBKeyRange.lowerBound(query),
+                IDBKeyRange.lowerBound(query, true),
               );
             }
             default: {
@@ -953,40 +956,43 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             }
           }
         },
-        isGreaterThanOrEqual(query) {
+        isGreaterThanOrEqualTo(query) {
           switch (indexName) {
             case 'postId': {
-              return executeQuery(store, IDBKeyRange.lowerBound(query));
+              return executeQuery(store, IDBKeyRange.lowerBound(query, false));
             }
             case 'name': {
               return executeQuery(
                 store.index('name'),
-                IDBKeyRange.lowerBound(query),
+                IDBKeyRange.lowerBound(query, false),
               );
             }
             case 'name_author': {
               return executeQuery(
                 store.index('name_author'),
-                IDBKeyRange.lowerBound([
-                  (
-                    query as {
-                      name: string;
-                      author: number;
-                    }
-                  ).name,
-                  (
-                    query as {
-                      name: string;
-                      author: number;
-                    }
-                  ).author,
-                ]),
+                IDBKeyRange.lowerBound(
+                  [
+                    (
+                      query as {
+                        name: string;
+                        author: number;
+                      }
+                    ).name,
+                    (
+                      query as {
+                        name: string;
+                        author: number;
+                      }
+                    ).author,
+                  ],
+                  false,
+                ),
               );
             }
             case 'author': {
               return executeQuery(
                 store.index('author'),
-                IDBKeyRange.lowerBound(query),
+                IDBKeyRange.lowerBound(query, false),
               );
             }
             default: {
@@ -999,37 +1005,40 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         isLessThan(query) {
           switch (indexName) {
             case 'postId': {
-              return executeQuery(store, IDBKeyRange.upperBound(query));
+              return executeQuery(store, IDBKeyRange.upperBound(query, true));
             }
             case 'name': {
               return executeQuery(
                 store.index('name'),
-                IDBKeyRange.upperBound(query),
+                IDBKeyRange.upperBound(query, true),
               );
             }
             case 'name_author': {
               return executeQuery(
                 store.index('name_author'),
-                IDBKeyRange.upperBound([
-                  (
-                    query as {
-                      name: string;
-                      author: number;
-                    }
-                  ).name,
-                  (
-                    query as {
-                      name: string;
-                      author: number;
-                    }
-                  ).author,
-                ]),
+                IDBKeyRange.upperBound(
+                  [
+                    (
+                      query as {
+                        name: string;
+                        author: number;
+                      }
+                    ).name,
+                    (
+                      query as {
+                        name: string;
+                        author: number;
+                      }
+                    ).author,
+                  ],
+                  true,
+                ),
               );
             }
             case 'author': {
               return executeQuery(
                 store.index('author'),
-                IDBKeyRange.upperBound(query),
+                IDBKeyRange.upperBound(query, true),
               );
             }
             default: {
@@ -1039,40 +1048,43 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             }
           }
         },
-        isLessThanOrEqual(query) {
+        isLessThanOrEqualTo(query) {
           switch (indexName) {
             case 'postId': {
-              return executeQuery(store, IDBKeyRange.upperBound(query));
+              return executeQuery(store, IDBKeyRange.upperBound(query, false));
             }
             case 'name': {
               return executeQuery(
                 store.index('name'),
-                IDBKeyRange.upperBound(query),
+                IDBKeyRange.upperBound(query, false),
               );
             }
             case 'name_author': {
               return executeQuery(
                 store.index('name_author'),
-                IDBKeyRange.upperBound([
-                  (
-                    query as {
-                      name: string;
-                      author: number;
-                    }
-                  ).name,
-                  (
-                    query as {
-                      name: string;
-                      author: number;
-                    }
-                  ).author,
-                ]),
+                IDBKeyRange.upperBound(
+                  [
+                    (
+                      query as {
+                        name: string;
+                        author: number;
+                      }
+                    ).name,
+                    (
+                      query as {
+                        name: string;
+                        author: number;
+                      }
+                    ).author,
+                  ],
+                  false,
+                ),
               );
             }
             case 'author': {
               return executeQuery(
                 store.index('author'),
-                IDBKeyRange.upperBound(query),
+                IDBKeyRange.upperBound(query, false),
               );
             }
             default: {
@@ -1087,13 +1099,13 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             case 'postId': {
               return executeQuery(
                 store,
-                IDBKeyRange.bound(query.from, query.to),
+                IDBKeyRange.bound(query.from, query.to, false, false),
               );
             }
             case 'name': {
               return executeQuery(
                 store.index('name'),
-                IDBKeyRange.bound(query.from, query.to),
+                IDBKeyRange.bound(query.from, query.to, false, false),
               );
             }
             case 'name_author': {
@@ -1128,13 +1140,15 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                       }
                     ).author,
                   ],
+                  false,
+                  false,
                 ),
               );
             }
             case 'author': {
               return executeQuery(
                 store.index('author'),
-                IDBKeyRange.bound(query.from, query.to),
+                IDBKeyRange.bound(query.from, query.to, false, false),
               );
             }
             default: {
