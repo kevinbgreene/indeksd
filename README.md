@@ -226,9 +226,9 @@ The ability to get multiple items from the database is exposed through range que
 
 ```
 const results: Array<PostsWithJoins> = await db.posts.where('id').isGreaterThan(4);
-const results: Array<PostsWithJoins> = await db.posts.where('id').isGreaterThanOrEqual(4);
+const results: Array<PostsWithJoins> = await db.posts.where('id').isGreaterThanOrEqualTo(4);
 const results: Array<PostsWithJoins> = await db.posts.where('id').isLessThan(4);
-const results: Array<PostsWithJoins> = await db.posts.where('id').isLessThanOrEqual(4);
+const results: Array<PostsWithJoins> = await db.posts.where('id').isLessThanOrEqualTo(4);
 const results: Array<PostsWithJoins> = await db.posts.where('id').isBetween({from: 1, to: 7});
 const results: Array<PostsWithJoins> = await db.posts.where('id').isEqualTo(4);
 ```
