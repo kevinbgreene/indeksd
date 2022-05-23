@@ -1,6 +1,9 @@
 import * as ts from 'typescript';
 
 export const COMMON_IDENTIFIERS = {
+  deleteIndex: ts.factory.createIdentifier('deleteIndex'),
+  includes: ts.factory.createIdentifier('includes'),
+  removeUnusedIndexes: ts.factory.createIdentifier('removeUnusedIndexes'),
   delete: ts.factory.createIdentifier('delete'),
   open: ts.factory.createIdentifier('open'),
   indexedDB: ts.factory.createIdentifier('indexedDB'),
@@ -84,4 +87,4 @@ export const COMMON_IDENTIFIERS = {
   DBGetRequest: ts.factory.createIdentifier('DBGetRequest'),
   DBPutRequest: ts.factory.createIdentifier('DBPutRequest'),
   DBDeleteRequest: ts.factory.createIdentifier('DBDeleteRequest'),
-};
+} as const;

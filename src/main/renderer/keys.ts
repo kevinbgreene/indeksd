@@ -173,9 +173,9 @@ export function getIndexesForTableAsArray(
 }
 
 export function getAutoIncrementFieldForTable(
-  def: TableDefinition,
+  table: TableDefinition,
 ): FieldDefinition | null {
-  const keys = def.body.filter((field) => {
+  const keys = table.body.filter((field) => {
     return annotationsFromList(field.annotations, ['autoincrement']);
   });
 
@@ -192,8 +192,8 @@ export function isPrimaryKey(tableIndex: TableIndex): boolean {
   return ['autoincrement', 'key'].includes(tableIndex.kind);
 }
 
-export function isAutoIncrementField(def: FieldDefinition): boolean {
-  return doAnnotationsInclude(def.annotations, ['autoincrement']);
+export function isAutoIncrementField(field: FieldDefinition): boolean {
+  return doAnnotationsInclude(field.annotations, ['autoincrement']);
 }
 
 export function getPrimaryKeyFieldForTable(
@@ -219,9 +219,9 @@ export function getPrimaryKeyFieldForTable(
 }
 
 export function getIndexFieldsForTable(
-  def: TableDefinition,
+  table: TableDefinition,
 ): ReadonlyArray<FieldDefinition> {
-  return def.body.filter((next) =>
+  return table.body.filter((next) =>
     annotationsFromList(next.annotations, ['index']),
   );
 }

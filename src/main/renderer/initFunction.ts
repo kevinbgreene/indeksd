@@ -73,6 +73,7 @@ export function createInitFunctionDeclaration(
               [
                 createCreateObjectStoreFunctionDeclaration(),
                 ...createCreateIndexFunctionDeclaration(database),
+                createRemoveUnusedIndexesFunctionDeclaration(),
                 createConstStatement(
                   COMMON_IDENTIFIERS.DBOpenRequest,
                   undefined,
@@ -111,6 +112,7 @@ export function createInitFunctionDeclaration(
                 createEventHandler('onupgradeneeded', [
                   createDbAssignment(),
                   ...createCreateObjectStoresCall(database),
+                  ...createRemoveUnusedIndexesCall(database),
                   ...createObjectStoreIndexes(database),
                 ]),
               ],
@@ -137,9 +139,9 @@ function createCallToCreateClient(): ts.ExpressionStatement {
 }
 
 function createCreateObjectStoresCall(
-  def: DatabaseDefinition,
+  database: DatabaseDefinition,
 ): ReadonlyArray<ts.Statement> {
-  return def.body.map((next) => {
+  return database.body.map((next) => {
     const indexesForTable = getIndexFieldsForTable(next);
     const objectStore = ts.factory.createCallExpression(
       COMMON_IDENTIFIERS.createObjectStore,
@@ -162,9 +164,9 @@ function createCreateObjectStoresCall(
 }
 
 function createOptionsForObjectStore(
-  def: TableDefinition,
+  table: TableDefinition,
 ): ts.ObjectLiteralExpression {
-  const primaryKeyField = getPrimaryKeyFieldForTable(def);
+  const primaryKeyField = getPrimaryKeyFieldForTable(table);
   const options = [
     ts.factory.createPropertyAssignment(
       ts.factory.createIdentifier('keyPath'),
@@ -185,15 +187,15 @@ function createOptionsForObjectStore(
 }
 
 function createObjectStoreIndexes(
-  def: DatabaseDefinition,
+  database: DatabaseDefinition,
 ): ReadonlyArray<ts.Statement> {
-  return def.body.flatMap((next) => {
+  return database.body.flatMap((next) => {
     return createIndexesForStore(next);
   });
 }
 
-function identifierForObjectStore(def: TableDefinition): ts.Identifier {
-  return ts.factory.createIdentifier(`${def.name.value}Store`);
+function identifierForObjectStore(table: TableDefinition): ts.Identifier {
+  return ts.factory.createIdentifier(`${table.name.value}Store`);
 }
 
 function createIndexesForStore(
@@ -474,4 +476,124 @@ function createCreateIndexFunctionDeclaration(
       ),
     ),
   ];
+}
+
+function createRemoveUnusedIndexesCall(
+  database: DatabaseDefinition,
+): ReadonlyArray<ts.Statement> {
+  return database.body.map((table) => {
+    const indexesForTable = getIndexesForTableAsArray(table);
+
+    return ts.factory.createExpressionStatement(
+      ts.factory.createCallExpression(
+        COMMON_IDENTIFIERS.removeUnusedIndexes,
+        undefined,
+        [
+          identifierForObjectStore(table),
+          ts.factory.createArrayLiteralExpression(
+            indexesForTable.map((next) => {
+              return ts.factory.createStringLiteral(next.name);
+            }),
+          ),
+        ],
+      ),
+    );
+  });
+}
+
+function createRemoveUnusedIndexesFunctionDeclaration(): ts.FunctionDeclaration {
+  return ts.factory.createFunctionDeclaration(
+    undefined,
+    undefined,
+    undefined,
+    COMMON_IDENTIFIERS.removeUnusedIndexes,
+    undefined,
+    [
+      ts.factory.createParameterDeclaration(
+        undefined,
+        undefined,
+        undefined,
+        COMMON_IDENTIFIERS.store,
+        undefined,
+        ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.IDBObjectStore),
+      ),
+      ts.factory.createParameterDeclaration(
+        undefined,
+        undefined,
+        undefined,
+        COMMON_IDENTIFIERS.indexNames,
+        undefined,
+        ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.ReadonlyArray, [
+          createStringType(),
+        ]),
+      ),
+    ],
+    createVoidType(),
+    ts.factory.createBlock(
+      [
+        ts.factory.createForOfStatement(
+          undefined,
+          ts.factory.createVariableDeclarationList(
+            [
+              ts.factory.createVariableDeclaration(
+                COMMON_IDENTIFIERS.indexName,
+                undefined,
+                undefined,
+                undefined,
+              ),
+            ],
+            ts.NodeFlags.Const,
+          ),
+          ts.factory.createCallExpression(
+            ts.factory.createPropertyAccessExpression(
+              COMMON_IDENTIFIERS.Array,
+              COMMON_IDENTIFIERS.from,
+            ),
+            undefined,
+            [
+              ts.factory.createPropertyAccessExpression(
+                COMMON_IDENTIFIERS.store,
+                COMMON_IDENTIFIERS.indexNames,
+              ),
+            ],
+          ),
+          ts.factory.createBlock(
+            [
+              ts.factory.createIfStatement(
+                ts.factory.createBinaryExpression(
+                  ts.factory.createCallExpression(
+                    ts.factory.createPropertyAccessExpression(
+                      COMMON_IDENTIFIERS.indexNames,
+                      COMMON_IDENTIFIERS.includes,
+                    ),
+                    undefined,
+                    [COMMON_IDENTIFIERS.indexName],
+                  ),
+                  ts.SyntaxKind.EqualsEqualsEqualsToken,
+                  ts.factory.createFalse(),
+                ),
+                ts.factory.createBlock(
+                  [
+                    ts.factory.createExpressionStatement(
+                      ts.factory.createCallExpression(
+                        ts.factory.createPropertyAccessExpression(
+                          COMMON_IDENTIFIERS.store,
+                          COMMON_IDENTIFIERS.deleteIndex,
+                        ),
+                        undefined,
+                        [COMMON_IDENTIFIERS.indexName],
+                      ),
+                    ),
+                  ],
+                  true,
+                ),
+              ),
+            ],
+            true,
+          ),
+        ),
+      ],
+      true,
+    ),
+  );
 }

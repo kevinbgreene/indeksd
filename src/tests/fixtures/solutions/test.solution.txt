@@ -1535,6 +1535,16 @@ export function init(): Promise<MyDatabaseClient> {
         store.createIndex(indexName, keyPath, options);
       }
     }
+    function removeUnusedIndexes(
+      store: IDBObjectStore,
+      indexNames: ReadonlyArray<string>,
+    ): void {
+      for (const indexName of Array.from(store.indexNames)) {
+        if (indexNames.includes(indexName) === false) {
+          store.deleteIndex(indexName);
+        }
+      }
+    }
     const DBOpenRequest = globalThis.indexedDB.open('MyDatabase', 3);
     DBOpenRequest.onerror = () => {
       reject(new Error('Error opening database: MyDatabase'));
@@ -1550,6 +1560,13 @@ export function init(): Promise<MyDatabaseClient> {
         autoIncrement: true,
       });
       const PostsStore = createObjectStore(db, 'Posts', { keyPath: 'postId' });
+      removeUnusedIndexes(AuthorsStore, ['id', 'name', 'email']);
+      removeUnusedIndexes(PostsStore, [
+        'postId',
+        'name',
+        'name_author',
+        'author',
+      ]);
       createIndex(AuthorsStore, 'name', ['name'], { unique: false });
       createIndex(AuthorsStore, 'email', ['email'], { unique: true });
       createIndex(PostsStore, 'name', ['name'], { unique: false });
