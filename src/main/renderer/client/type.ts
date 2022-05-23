@@ -6,6 +6,7 @@ import { createBooleanType, createNumberType } from '../types';
 import { capitalize } from '../utils';
 import { createAddMethodSignatureForTable } from './addMethod';
 import { clientTypeNameForTable, createDatabaseClientName } from './common';
+import { createDeleteMethodSignatureForTable } from './deleteMethod';
 import { createGetMethodSignaturesForTable } from './getMethod';
 import { createPutMethodSignatureForTable } from './putMethod';
 import { createSortByMethodSignaturesForTable } from './sortByMethod';
@@ -133,6 +134,7 @@ export function createClientTypeDeclaration(
         ts.factory.createTypeLiteralNode([
           createAddMethodSignatureForTable(table),
           createPutMethodSignatureForTable(table),
+          createDeleteMethodSignatureForTable(table),
           ...createGetMethodSignaturesForTable(table, database),
           ...createWhereMethodSignaturesForTable(table, database),
           ...createSortByMethodSignaturesForTable(table, database),

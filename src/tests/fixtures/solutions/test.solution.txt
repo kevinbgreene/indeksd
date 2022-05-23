@@ -73,6 +73,16 @@ export type PostsPutArgs =
       content?: string;
       author: number | AuthorsPutArgs;
     };
+export type AuthorsDeleteArgs =
+  | number
+  | {
+      id: number;
+    };
+export type PostsDeleteArgs =
+  | string
+  | {
+      postId: string;
+    };
 export type AuthorsGetArgs =
   | number
   | {
@@ -199,6 +209,12 @@ export type AuthorsClient = {
       transaction?: IDBTransaction;
     },
   ): Promise<Authors>;
+  delete(
+    arg: AuthorsDeleteArgs,
+    options?: {
+      transaction?: IDBTransaction;
+    },
+  ): Promise<void>;
   get(
     arg: AuthorsGetArgs,
     options?: {
@@ -235,6 +251,12 @@ export type PostsClient = {
       transaction?: IDBTransaction;
     },
   ): Promise<Post>;
+  delete(
+    arg: PostsDeleteArgs,
+    options?: {
+      transaction?: IDBTransaction;
+    },
+  ): Promise<void>;
   get(
     arg: PostsGetArgs,
     options?: {
@@ -387,6 +409,40 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             reject(new Error('Operation produced a null result'));
           }
         };
+      });
+    }
+    delete(
+      arg: AuthorsDeleteArgs,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<void> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ?? db.transaction(['Authors'], 'readwrite');
+        const store = tx.objectStore('Authors');
+        let DBDeleteRequest: IDBRequest | null = null;
+        if (isAuthorsIdIndex(arg)) {
+          DBDeleteRequest = store.delete(arg.id);
+        } else {
+          DBDeleteRequest = store.delete(arg);
+        }
+        if (DBDeleteRequest != null) {
+          DBDeleteRequest.onerror = () => {
+            if (DBDeleteRequest != null) {
+              reject(DBDeleteRequest.error);
+            } else {
+              reject(
+                new Error('Unknown error occurred trying to perform operation'),
+              );
+            }
+          };
+          DBDeleteRequest.onsuccess = () => {
+            resolve(undefined);
+          };
+        } else {
+          reject(new Error('No available index for given query'));
+        }
       });
     }
     get(
@@ -819,6 +875,49 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             reject(new Error('Operation produced a null result'));
           }
         };
+      });
+    }
+    delete(
+      arg: PostsDeleteArgs,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<void> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ??
+          db.transaction(
+            Array.from(
+              new Set([
+                ...AuthorsClientImpl.tablesForTransaction,
+                ...PostsClientImpl.tablesForTransaction,
+              ]),
+            ),
+            'readwrite',
+          );
+        const store = tx.objectStore('Posts');
+        let DBDeleteRequest: IDBRequest | null = null;
+        if (isPostsPostIdIndex(arg)) {
+          DBDeleteRequest = store.delete(arg.postId);
+        } else {
+          DBDeleteRequest = store.delete(arg);
+        }
+        if (DBDeleteRequest != null) {
+          DBDeleteRequest.onerror = () => {
+            if (DBDeleteRequest != null) {
+              reject(DBDeleteRequest.error);
+            } else {
+              reject(
+                new Error('Unknown error occurred trying to perform operation'),
+              );
+            }
+          };
+          DBDeleteRequest.onsuccess = () => {
+            resolve(undefined);
+          };
+        } else {
+          reject(new Error('No available index for given query'));
+        }
       });
     }
     get(

@@ -1,6 +1,9 @@
 import * as ts from 'typescript';
 
 export const COMMON_IDENTIFIERS = {
+  delete: ts.factory.createIdentifier('delete'),
+  open: ts.factory.createIdentifier('open'),
+  indexedDB: ts.factory.createIdentifier('indexedDB'),
   sortBy: ts.factory.createIdentifier('sortBy'),
   objectStore: ts.factory.createIdentifier('objectStore'),
   objectStoreNames: ts.factory.createIdentifier('objectStoreNames'),
@@ -80,4 +83,5 @@ export const COMMON_IDENTIFIERS = {
   DBAddRequest: ts.factory.createIdentifier('DBAddRequest'),
   DBGetRequest: ts.factory.createIdentifier('DBGetRequest'),
   DBPutRequest: ts.factory.createIdentifier('DBPutRequest'),
+  DBDeleteRequest: ts.factory.createIdentifier('DBDeleteRequest'),
 };

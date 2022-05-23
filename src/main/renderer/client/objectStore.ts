@@ -1,14 +1,15 @@
 import * as ts from 'typescript';
 import { createConstStatement } from '../helpers';
+import { COMMON_IDENTIFIERS } from '../identifiers';
 
 export function createGetObjectStore(storeName: string): ts.Statement {
   return createConstStatement(
-    ts.factory.createIdentifier('store'),
+    COMMON_IDENTIFIERS.store,
     undefined,
     ts.factory.createCallExpression(
       ts.factory.createPropertyAccessExpression(
-        ts.factory.createIdentifier('tx'),
-        ts.factory.createIdentifier('objectStore'),
+        COMMON_IDENTIFIERS.tx,
+        COMMON_IDENTIFIERS.objectStore,
       ),
       undefined,
       [ts.factory.createStringLiteral(storeName)],

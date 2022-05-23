@@ -14,9 +14,11 @@ import { COMMON_IDENTIFIERS } from './identifiers';
 import {
   annotationsFromList,
   getIndexesForTable,
+  getIndexesForTableAsArray,
   getIndexFieldsForTable,
   getPrimaryKeyFieldForTable,
   isAutoIncrementField,
+  TableIndex,
 } from './keys';
 import {
   createArrayType,
@@ -70,7 +72,7 @@ export function createInitFunctionDeclaration(
             ts.factory.createBlock(
               [
                 createCreateObjectStoreFunctionDeclaration(),
-                createCreateIndexFunctionDeclaration(),
+                ...createCreateIndexFunctionDeclaration(database),
                 createConstStatement(
                   COMMON_IDENTIFIERS.DBOpenRequest,
                   undefined,
@@ -78,9 +80,9 @@ export function createInitFunctionDeclaration(
                     ts.factory.createPropertyAccessExpression(
                       ts.factory.createPropertyAccessExpression(
                         COMMON_IDENTIFIERS.globalThis,
-                        'indexedDB',
+                        COMMON_IDENTIFIERS.indexedDB,
                       ),
-                      'open',
+                      COMMON_IDENTIFIERS.open,
                     ),
                     undefined,
                     [
@@ -375,87 +377,101 @@ function createCreateObjectStoreFunctionDeclaration(): ts.FunctionDeclaration {
   );
 }
 
-function createCreateIndexFunctionDeclaration(): ts.FunctionDeclaration {
-  return ts.factory.createFunctionDeclaration(
-    undefined,
-    undefined,
-    undefined,
-    COMMON_IDENTIFIERS.createIndex,
-    [],
-    [
-      ts.factory.createParameterDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.store,
-        undefined,
-        ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.IDBObjectStore),
-      ),
-      ts.factory.createParameterDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.indexName,
-        undefined,
-        createStringType(),
-      ),
-      ts.factory.createParameterDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.keyPath,
-        undefined,
-        createArrayType(createStringType()),
-      ),
-      ts.factory.createParameterDeclaration(
-        undefined,
-        undefined,
-        undefined,
-        COMMON_IDENTIFIERS.options,
-        undefined,
-        ts.factory.createTypeReferenceNode(
-          COMMON_IDENTIFIERS.IDBIndexParameters,
-        ),
-      ),
-    ],
-    createVoidType(),
-    ts.factory.createBlock(
+function createCreateIndexFunctionDeclaration(
+  database: DatabaseDefinition,
+): ReadonlyArray<ts.FunctionDeclaration> {
+  const indexes: ReadonlyArray<TableIndex> = database.body.flatMap((table) => {
+    return getIndexesForTableAsArray(table).filter(
+      (next) => next.kind === 'index',
+    );
+  });
+
+  if (indexes.length === 0) {
+    return [];
+  }
+
+  return [
+    ts.factory.createFunctionDeclaration(
+      undefined,
+      undefined,
+      undefined,
+      COMMON_IDENTIFIERS.createIndex,
+      [],
       [
-        ts.factory.createIfStatement(
-          ts.factory.createCallExpression(
-            ts.factory.createPropertyAccessExpression(
-              ts.factory.createPropertyAccessExpression(
-                COMMON_IDENTIFIERS.store,
-                COMMON_IDENTIFIERS.indexNames,
-              ),
-              COMMON_IDENTIFIERS.contains,
-            ),
-            undefined,
-            [COMMON_IDENTIFIERS.indexName],
-          ),
-          ts.factory.createBlock([ts.factory.createReturnStatement()], true),
-          ts.factory.createBlock(
-            [
-              ts.factory.createExpressionStatement(
-                ts.factory.createCallExpression(
-                  ts.factory.createPropertyAccessExpression(
-                    COMMON_IDENTIFIERS.store,
-                    COMMON_IDENTIFIERS.createIndex,
-                  ),
-                  undefined,
-                  [
-                    COMMON_IDENTIFIERS.indexName,
-                    COMMON_IDENTIFIERS.keyPath,
-                    COMMON_IDENTIFIERS.options,
-                  ],
-                ),
-              ),
-            ],
-            true,
+        ts.factory.createParameterDeclaration(
+          undefined,
+          undefined,
+          undefined,
+          COMMON_IDENTIFIERS.store,
+          undefined,
+          ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.IDBObjectStore),
+        ),
+        ts.factory.createParameterDeclaration(
+          undefined,
+          undefined,
+          undefined,
+          COMMON_IDENTIFIERS.indexName,
+          undefined,
+          createStringType(),
+        ),
+        ts.factory.createParameterDeclaration(
+          undefined,
+          undefined,
+          undefined,
+          COMMON_IDENTIFIERS.keyPath,
+          undefined,
+          createArrayType(createStringType()),
+        ),
+        ts.factory.createParameterDeclaration(
+          undefined,
+          undefined,
+          undefined,
+          COMMON_IDENTIFIERS.options,
+          undefined,
+          ts.factory.createTypeReferenceNode(
+            COMMON_IDENTIFIERS.IDBIndexParameters,
           ),
         ),
       ],
-      true,
+      createVoidType(),
+      ts.factory.createBlock(
+        [
+          ts.factory.createIfStatement(
+            ts.factory.createCallExpression(
+              ts.factory.createPropertyAccessExpression(
+                ts.factory.createPropertyAccessExpression(
+                  COMMON_IDENTIFIERS.store,
+                  COMMON_IDENTIFIERS.indexNames,
+                ),
+                COMMON_IDENTIFIERS.contains,
+              ),
+              undefined,
+              [COMMON_IDENTIFIERS.indexName],
+            ),
+            ts.factory.createBlock([ts.factory.createReturnStatement()], true),
+            ts.factory.createBlock(
+              [
+                ts.factory.createExpressionStatement(
+                  ts.factory.createCallExpression(
+                    ts.factory.createPropertyAccessExpression(
+                      COMMON_IDENTIFIERS.store,
+                      COMMON_IDENTIFIERS.createIndex,
+                    ),
+                    undefined,
+                    [
+                      COMMON_IDENTIFIERS.indexName,
+                      COMMON_IDENTIFIERS.keyPath,
+                      COMMON_IDENTIFIERS.options,
+                    ],
+                  ),
+                ),
+              ],
+              true,
+            ),
+          ),
+        ],
+        true,
+      ),
     ),
-  );
+  ];
 }

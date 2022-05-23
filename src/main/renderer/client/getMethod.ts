@@ -32,7 +32,9 @@ export function createGetArgsTypeName(table: TableDefinition): string {
   return `${capitalize(table.name.value)}GetArgs`;
 }
 
-function typeReferenceForGetMethodByTable(table: TableDefinition): ts.TypeNode {
+export function typeReferenceForGetMethodByTable(
+  table: TableDefinition,
+): ts.TypeNode {
   return ts.factory.createTypeReferenceNode(createGetArgsTypeName(table));
 }
 
@@ -619,7 +621,7 @@ function normalizeName(name: string): string {
   return capitalize(result);
 }
 
-function createPredicateNameForIndex(
+export function createPredicateNameForIndex(
   table: TableDefinition,
   index: TableIndex,
 ): string {
@@ -743,7 +745,7 @@ function objectTypeForIndexResolvingPrimaryKeys(
   );
 }
 
-function typeNodesForIndexResolvingPrimaryKeys(
+export function typeNodesForIndexResolvingPrimaryKeys(
   index: TableIndex,
   database: DatabaseDefinition,
 ): ReadonlyArray<ts.TypeNode> {
@@ -767,22 +769,20 @@ function typeNodesForIndexResolvingPrimaryKeys(
 export function createGetArgsTypeDeclaration(
   table: TableDefinition,
   database: DatabaseDefinition,
-): Array<ts.TypeAliasDeclaration> {
+): ts.TypeAliasDeclaration {
   const indexes = getIndexesForTableAsArray(table);
 
-  return [
-    ts.factory.createTypeAliasDeclaration(
-      undefined,
-      [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
-      ts.factory.createIdentifier(createGetArgsTypeName(table)),
-      [],
-      ts.factory.createUnionTypeNode(
-        indexes.flatMap((next) => {
-          return typeNodesForIndexResolvingPrimaryKeys(next, database);
-        }),
-      ),
+  return ts.factory.createTypeAliasDeclaration(
+    undefined,
+    [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)],
+    ts.factory.createIdentifier(createGetArgsTypeName(table)),
+    [],
+    ts.factory.createUnionTypeNode(
+      indexes.flatMap((next) => {
+        return typeNodesForIndexResolvingPrimaryKeys(next, database);
+      }),
     ),
-  ];
+  );
 }
 
 export function createOnSuccessHandlerForGetMethod(

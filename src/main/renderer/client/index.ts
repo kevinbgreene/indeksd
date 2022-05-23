@@ -10,6 +10,7 @@ import {
   createClientTypeNode,
   clientClassNameForTable,
 } from './common';
+import { createDeleteMethod } from './deleteMethod';
 import { createGetMethod } from './getMethod';
 import { createPutMethod } from './putMethod';
 import { createSortByMethod } from './sortByMethod';
@@ -40,6 +41,7 @@ function createClientDeclarationForTable(
         createTablesStaticArray(table, database),
         createAddMethod(table, database),
         createPutMethod(table, database),
+        createDeleteMethod(table, database),
         ...createGetMethod(table, database),
         ...createWhereMethod(table, database),
         ...createSortByMethod(table, database),

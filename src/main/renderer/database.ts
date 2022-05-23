@@ -14,6 +14,7 @@ import {
   createWhereQueryType,
 } from './client/whereMethod';
 import { createInitFunctionDeclaration } from './initFunction';
+import { createDeleteArgsTypeDeclaration } from './client/deleteMethod';
 
 export function renderDatabaseDefinition(
   database: DatabaseDefinition,
@@ -34,7 +35,10 @@ export function renderDatabaseDefinition(
     ...database.body.map((next) => {
       return createPutArgsTypeDeclaration(next, database);
     }),
-    ...database.body.flatMap((next) => {
+    ...database.body.map((next) => {
+      return createDeleteArgsTypeDeclaration(next, database);
+    }),
+    ...database.body.map((next) => {
       return createGetArgsTypeDeclaration(next, database);
     }),
     ...database.body.flatMap((next) => {
