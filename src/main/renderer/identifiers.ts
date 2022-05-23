@@ -1,6 +1,8 @@
 import * as ts from 'typescript';
 
 export const COMMON_IDENTIFIERS = {
+  idToDelete: ts.factory.createIdentifier('idToDelete'),
+  mergedResult: ts.factory.createIdentifier('mergedResult'),
   deleteIndex: ts.factory.createIdentifier('deleteIndex'),
   includes: ts.factory.createIdentifier('includes'),
   removeUnusedIndexes: ts.factory.createIdentifier('removeUnusedIndexes'),
@@ -61,6 +63,22 @@ export const COMMON_IDENTIFIERS = {
   tablesForTransaction: ts.factory.createIdentifier('tablesForTransaction'),
   createDatabaseClient: ts.factory.createIdentifier('createDatabaseClient'),
 
+  // Observable Types
+  nextId: ts.factory.createPrivateIdentifier('#nextId'),
+  SubscriptionEvent: ts.factory.createIdentifier('SubscriptionEvent'),
+  event: ts.factory.createIdentifier('event'),
+  listeners: ts.factory.createPrivateIdentifier('#listeners'),
+  ItemType: ts.factory.createIdentifier('ItemType'),
+  PrimaryKeyType: ts.factory.createIdentifier('PrimaryKeyType'),
+  Observable: ts.factory.createIdentifier('Observable'),
+  subscribe: ts.factory.createIdentifier('subscribe'),
+  eventName: ts.factory.createIdentifier('eventName'),
+  callback: ts.factory.createIdentifier('callback'),
+  _push: ts.factory.createIdentifier('_push'),
+  data: ts.factory.createIdentifier('data'),
+  type: ts.factory.createIdentifier('type'),
+  innerMap: ts.factory.createIdentifier('innerMap'),
+
   // JavaScript Object References
   Map: ts.factory.createIdentifier('Map'),
   Object: ts.factory.createIdentifier('Object'),
@@ -69,6 +87,9 @@ export const COMMON_IDENTIFIERS = {
   Set: ts.factory.createIdentifier('Set'),
   Array: ts.factory.createIdentifier('Array'),
   Error: ts.factory.createIdentifier('Error'),
+  has: ts.factory.createIdentifier('has'),
+  forEach: ts.factory.createIdentifier('forEach'),
+  set: ts.factory.createIdentifier('set'),
 
   // Standard IndexedDB Interfaces
   IDBKeyRange: ts.factory.createIdentifier('IDBKeyRange'),

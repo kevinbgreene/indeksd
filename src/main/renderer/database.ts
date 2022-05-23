@@ -15,6 +15,7 @@ import {
 } from './client/whereMethod';
 import { createInitFunctionDeclaration } from './initFunction';
 import { createDeleteArgsTypeDeclaration } from './client/deleteMethod';
+import { createSubscriptionTypeDeclaration } from './observable';
 
 export function renderDatabaseDefinition(
   database: DatabaseDefinition,
@@ -45,6 +46,7 @@ export function renderDatabaseDefinition(
       return createIndexPredicates(next, database);
     }),
     createRangeQueryTypeDeclaration(),
+    createSubscriptionTypeDeclaration(),
     ...createClientTypeDeclaration(database),
     createClientFunction(database),
     createInitFunctionDeclaration(database),

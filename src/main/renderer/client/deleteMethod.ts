@@ -2,12 +2,16 @@ import * as ts from 'typescript';
 import { DatabaseDefinition, TableDefinition } from '../../parser';
 import {
   createConstStatement,
-  createLetStatement,
   createNewErrorWithMessage,
   createNewPromiseWithBody,
 } from '../helpers';
 import { COMMON_IDENTIFIERS } from '../identifiers';
-import { getIndexesForTableAsArray, TableIndex } from '../keys';
+import {
+  getIndexesForTableAsArray,
+  getPrimaryKeyTypeForTable,
+  TableIndex,
+} from '../keys';
+import { createPushMethodCall } from '../observable';
 import { createVoidType } from '../types';
 import { capitalize } from '../utils';
 import { createOnErrorHandler } from './common';
@@ -58,16 +62,20 @@ function createDeleteMethodReturnType(): ts.TypeNode {
 }
 
 function createDBDeleteRequestVariable(): ts.Statement {
-  return createLetStatement(
+  return createConstStatement(
     COMMON_IDENTIFIERS.DBDeleteRequest,
-    ts.factory.createUnionTypeNode([
-      ts.factory.createTypeReferenceNode(
-        COMMON_IDENTIFIERS.IDBRequest,
-        undefined,
+    ts.factory.createTypeReferenceNode(
+      COMMON_IDENTIFIERS.IDBRequest,
+      undefined,
+    ),
+    ts.factory.createCallExpression(
+      ts.factory.createPropertyAccessExpression(
+        COMMON_IDENTIFIERS.store,
+        COMMON_IDENTIFIERS.delete,
       ),
-      ts.factory.createLiteralTypeNode(ts.factory.createNull()),
-    ]),
-    ts.factory.createNull(),
+      undefined,
+      [COMMON_IDENTIFIERS.idToDelete],
+    ),
   );
 }
 
@@ -137,7 +145,6 @@ export function createDeleteMethod(
                   withJoins: false,
                 }),
                 createGetObjectStore(table.name.value),
-                createDBDeleteRequestVariable(),
                 ...createIndexNarrowing(table),
               ],
               true,
@@ -194,6 +201,7 @@ function createOnSuccessHandlerForDeleteMethod(): ts.Statement {
         undefined,
         ts.factory.createBlock(
           [
+            createPushMethodCall('delete', COMMON_IDENTIFIERS.idToDelete),
             ts.factory.createExpressionStatement(
               ts.factory.createCallExpression(
                 COMMON_IDENTIFIERS.resolve,
@@ -223,113 +231,37 @@ function createIndexNarrowing(
   }
 
   return [
-    createConditionsForPrimaryKey({ table, primaryKey: primaryKeys[0] }),
+    createIdToDeleteVariableDeclaration({ table, primaryKey: primaryKeys[0] }),
+    createDBDeleteRequestVariable(),
     createSafeHandlingForRequest(),
   ];
 }
 
-function createHandlingForDeleteByPrimaryKey(
-  argumentsArray: ReadonlyArray<ts.Expression>,
-): ReadonlyArray<ts.Statement> {
-  return [
-    ts.factory.createExpressionStatement(
-      ts.factory.createAssignment(
-        COMMON_IDENTIFIERS.DBDeleteRequest,
-        ts.factory.createCallExpression(
-          ts.factory.createPropertyAccessExpression(
-            COMMON_IDENTIFIERS.store,
-            COMMON_IDENTIFIERS.delete,
-          ),
-          undefined,
-          argumentsArray,
-        ),
-      ),
-    ),
-  ];
-}
-
-function createConditionsForPrimaryKey({
+function createIdToDeleteVariableDeclaration({
   table,
   primaryKey,
 }: {
   table: TableDefinition;
   primaryKey: TableIndex;
 }): ts.Statement {
-  return ts.factory.createIfStatement(
-    ts.factory.createCallExpression(
-      ts.factory.createIdentifier(
-        createPredicateNameForIndex(table, primaryKey),
+  return createConstStatement(
+    COMMON_IDENTIFIERS.idToDelete,
+    getPrimaryKeyTypeForTable(table),
+    ts.factory.createConditionalExpression(
+      ts.factory.createCallExpression(
+        ts.factory.createIdentifier(
+          createPredicateNameForIndex(table, primaryKey),
+        ),
+        undefined,
+        [COMMON_IDENTIFIERS.arg],
       ),
       undefined,
-      [COMMON_IDENTIFIERS.arg],
-    ),
-    ts.factory.createBlock(
-      [
-        ...createHandlingForDeleteByPrimaryKey([
-          ts.factory.createPropertyAccessExpression(
-            COMMON_IDENTIFIERS.arg,
-            primaryKey.name,
-          ),
-        ]),
-      ],
-      true,
-    ),
-    ts.factory.createBlock(
-      [
-        ts.factory.createExpressionStatement(
-          ts.factory.createAssignment(
-            COMMON_IDENTIFIERS.DBDeleteRequest,
-            ts.factory.createCallExpression(
-              ts.factory.createPropertyAccessExpression(
-                COMMON_IDENTIFIERS.store,
-                COMMON_IDENTIFIERS.delete,
-              ),
-              undefined,
-              [COMMON_IDENTIFIERS.arg],
-            ),
-          ),
-        ),
-      ],
-      true,
+      ts.factory.createPropertyAccessExpression(
+        COMMON_IDENTIFIERS.arg,
+        primaryKey.name,
+      ),
+      undefined,
+      COMMON_IDENTIFIERS.arg,
     ),
   );
-}
-
-export function createHandlingForDeleteByIndex({
-  tableIndex,
-  argumentsArray,
-}: {
-  tableIndex: TableIndex;
-  argumentsArray: ReadonlyArray<ts.Expression>;
-}): ReadonlyArray<ts.Statement> {
-  return [
-    createConstStatement(
-      COMMON_IDENTIFIERS.index,
-      ts.factory.createTypeReferenceNode(
-        COMMON_IDENTIFIERS.IDBIndex,
-        undefined,
-      ),
-      ts.factory.createCallExpression(
-        ts.factory.createPropertyAccessExpression(
-          COMMON_IDENTIFIERS.store,
-          COMMON_IDENTIFIERS.index,
-        ),
-        undefined,
-        [ts.factory.createStringLiteral(tableIndex.name)],
-      ),
-    ),
-    ts.factory.createExpressionStatement(
-      ts.factory.createAssignment(
-        COMMON_IDENTIFIERS.DBDeleteRequest,
-        ts.factory.createCallExpression(
-          ts.factory.createPropertyAccessExpression(
-            COMMON_IDENTIFIERS.index,
-            COMMON_IDENTIFIERS.delete,
-          ),
-          undefined,
-          argumentsArray,
-        ),
-      ),
-    ),
-  ];
 }

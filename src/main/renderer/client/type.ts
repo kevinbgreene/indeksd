@@ -2,6 +2,7 @@ import * as ts from 'typescript';
 import { DatabaseDefinition, TableDefinition } from '../../parser';
 import { COMMON_IDENTIFIERS } from '../identifiers';
 import { getIndexesForTableAsArray } from '../keys';
+import { createSubscribeMethodSignatureForTable } from '../observable';
 import { createBooleanType, createNumberType } from '../types';
 import { capitalize } from '../utils';
 import { createAddMethodSignatureForTable } from './addMethod';
@@ -132,6 +133,7 @@ export function createClientTypeDeclaration(
         ts.factory.createIdentifier(clientTypeNameForTable(table)),
         undefined,
         ts.factory.createTypeLiteralNode([
+          createSubscribeMethodSignatureForTable(table),
           createAddMethodSignatureForTable(table),
           createPutMethodSignatureForTable(table),
           createDeleteMethodSignatureForTable(table),

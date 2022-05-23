@@ -9,6 +9,8 @@ import {
 } from '../keys';
 import { getJoinsForTable, TableJoin } from '../joins';
 import { createConstStatement, createNewErrorWithMessage } from '../helpers';
+import { getItemTypeForTable } from '../common';
+import { createPushMethodCall } from '../observable';
 
 export function clientTypeNameForTable(def: TableDefinition): string {
   return `${capitalize(def.name.value)}Client`;
@@ -94,7 +96,8 @@ export function createOnErrorHandler(methodName: ts.Identifier): ts.Statement {
 }
 
 export function createOnSuccessHandler(
-  methodName: ts.Identifier,
+  requestName: ts.Identifier,
+  methodName: 'add' | 'put',
   table: TableDefinition,
   database: DatabaseDefinition,
 ): ts.Statement {
@@ -104,7 +107,7 @@ export function createOnSuccessHandler(
   return ts.factory.createExpressionStatement(
     ts.factory.createAssignment(
       ts.factory.createPropertyAccessExpression(
-        methodName,
+        requestName,
         COMMON_IDENTIFIERS.onsuccess,
       ),
       ts.factory.createArrowFunction(
@@ -117,39 +120,46 @@ export function createOnSuccessHandler(
           [
             ts.factory.createIfStatement(
               ts.factory.createBinaryExpression(
-                methodName,
+                requestName,
                 ts.SyntaxKind.ExclamationEqualsToken,
                 ts.factory.createNull(),
               ),
               ts.factory.createBlock(
                 [
+                  createConstStatement(
+                    COMMON_IDENTIFIERS.mergedResult,
+                    getItemTypeForTable(table),
+                    ts.factory.createObjectLiteralExpression(
+                      [
+                        ts.factory.createSpreadAssignment(
+                          COMMON_IDENTIFIERS.arg,
+                        ),
+                        ...joins.map((next) => {
+                          return ts.factory.createPropertyAssignment(
+                            next.fieldName,
+                            identifierForJoinId(next),
+                          );
+                        }),
+                        ts.factory.createPropertyAssignment(
+                          primaryKeyField.name.value,
+                          ts.factory.createPropertyAccessExpression(
+                            requestName,
+                            COMMON_IDENTIFIERS.result,
+                          ),
+                        ),
+                      ],
+                      true,
+                    ),
+                  ),
+                  createPushMethodCall(
+                    methodName,
+                    COMMON_IDENTIFIERS.mergedResult,
+                  ),
                   ts.factory.createExpressionStatement(
                     ts.factory.createCallExpression(
                       COMMON_IDENTIFIERS.resolve,
                       undefined,
-                      [
-                        ts.factory.createObjectLiteralExpression(
-                          [
-                            ts.factory.createSpreadAssignment(
-                              COMMON_IDENTIFIERS.arg,
-                            ),
-                            ...joins.map((next) => {
-                              return ts.factory.createPropertyAssignment(
-                                next.fieldName,
-                                identifierForJoinId(next),
-                              );
-                            }),
-                            ts.factory.createPropertyAssignment(
-                              primaryKeyField.name.value,
-                              ts.factory.createPropertyAccessExpression(
-                                methodName,
-                                COMMON_IDENTIFIERS.result,
-                              ),
-                            ),
-                          ],
-                          true,
-                        ),
-                      ],
+                      [COMMON_IDENTIFIERS.mergedResult],
                     ),
                   ),
                 ],
@@ -183,16 +193,14 @@ export function createOnSuccessHandler(
 export function createAddRequestHandling(
   table: TableDefinition,
   database: DatabaseDefinition,
-  method: 'put' | 'add',
+  methodName: 'put' | 'add',
 ): ReadonlyArray<ts.Statement> {
   const joins = getJoinsForTable(table, database);
   const statements: Array<ts.Statement> = [];
   const requestName =
-    method === 'put'
+    methodName === 'put'
       ? COMMON_IDENTIFIERS.DBPutRequest
       : COMMON_IDENTIFIERS.DBAddRequest;
-  const methodName =
-    method === 'put' ? COMMON_IDENTIFIERS.put : COMMON_IDENTIFIERS.add;
 
   statements.push(
     createConstStatement(
@@ -224,7 +232,7 @@ export function createAddRequestHandling(
 
   statements.push(
     createOnErrorHandler(requestName),
-    createOnSuccessHandler(requestName, table, database),
+    createOnSuccessHandler(requestName, methodName, table, database),
   );
 
   return statements;

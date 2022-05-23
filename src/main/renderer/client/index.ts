@@ -1,8 +1,11 @@
 import * as ts from 'typescript';
 import { DatabaseDefinition, TableDefinition } from '../../parser';
+import { getItemTypeForTable } from '../common';
 import { createConstStatement } from '../helpers';
 import { COMMON_IDENTIFIERS } from '../identifiers';
 import { getJoinsForTable } from '../joins';
+import { getPrimaryKeyTypeForTable } from '../keys';
+import { createObservableClass } from '../observable';
 import { createStringType } from '../types';
 import { createAddMethod } from './addMethod';
 import {
@@ -36,7 +39,14 @@ function createClientDeclarationForTable(
       undefined,
       clientClassName,
       undefined,
-      undefined,
+      [
+        ts.factory.createHeritageClause(ts.SyntaxKind.ExtendsKeyword, [
+          ts.factory.createExpressionWithTypeArguments(
+            COMMON_IDENTIFIERS.Observable,
+            [getItemTypeForTable(table), getPrimaryKeyTypeForTable(table)],
+          ),
+        ]),
+      ],
       [
         createTablesStaticArray(table, database),
         createAddMethod(table, database),
@@ -104,6 +114,7 @@ export function createClientFunction(
     createClientTypeNode(database), // return type
     ts.factory.createBlock(
       [
+        createObservableClass(),
         ...database.body.flatMap((table) => {
           return createClientDeclarationForTable(table, database);
         }),

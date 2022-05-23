@@ -196,7 +196,20 @@ type RangeQuery<ArgType, ReturnType> = {
   isBetween(arg: { from: ArgType; to: ArgType }): ReturnType;
   isEqualTo(arg: ArgType): ReturnType;
 };
+export type SubscriptionEvent<ItemType, PrimaryKeyType> =
+  | {
+      type: 'add' | 'put';
+      data: ItemType;
+    }
+  | {
+      type: 'delete';
+      data: PrimaryKeyType;
+    };
 export type AuthorsClient = {
+  subscribe(
+    eventName: 'change' | 'add' | 'put' | 'delete',
+    callback: (event: SubscriptionEvent<Authors, number>) => void,
+  ): void;
   add(
     arg: AuthorsAddArgs,
     options?: {
@@ -239,6 +252,10 @@ export type AuthorsClient = {
   ): Promise<ReadonlyArray<Authors>>;
 };
 export type PostsClient = {
+  subscribe(
+    eventName: 'change' | 'add' | 'put' | 'delete',
+    callback: (event: SubscriptionEvent<Post, string>) => void,
+  ): void;
   add(
     arg: PostsAddArgs,
     options?: {
@@ -339,7 +356,39 @@ export type MyDatabaseClient = {
   posts: PostsClient;
 };
 function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
-  class AuthorsClientImpl {
+  class Observable<ItemType, PrimaryKeyType> {
+    #listeners: Map<
+      string,
+      Map<number, (event: SubscriptionEvent<ItemType, PrimaryKeyType>) => void>
+    > = new Map();
+    #nextId: number = 0;
+    subscribe(
+      eventName: 'change' | 'add' | 'put' | 'delete',
+      callback: (event: SubscriptionEvent<ItemType, PrimaryKeyType>) => void,
+    ): void {
+      if (this.#listeners.has(eventName)) {
+        this.#listeners.get(eventName)?.set(this.#nextId, callback);
+      } else {
+        const innerMap: Map<
+          number,
+          (event: SubscriptionEvent<ItemType, PrimaryKeyType>) => void
+        > = new Map();
+        innerMap.set(this.#nextId, callback);
+        this.#listeners.set(eventName, innerMap);
+      }
+    }
+    _push(eventName: 'delete', data: PrimaryKeyType): void;
+    _push(eventName: 'add' | 'put', data: ItemType): void;
+    _push(eventName, data): void {
+      this.#listeners.get('change')?.forEach((callback) => {
+        callback({ type: eventName, data });
+      });
+      this.#listeners.get(eventName)?.forEach((callback) => {
+        callback({ type: eventName, data });
+      });
+    }
+  }
+  class AuthorsClientImpl extends Observable<Authors, number> {
     static tablesForTransaction: ReadonlyArray<string> = ['Authors'];
     add(
       arg: AuthorsAddArgs,
@@ -366,10 +415,12 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         };
         DBAddRequest.onsuccess = () => {
           if (DBAddRequest != null) {
-            resolve({
+            const mergedResult: Authors = {
               ...arg,
               id: DBAddRequest.result,
-            });
+            };
+            this._push('add', mergedResult);
+            resolve(mergedResult);
           } else {
             reject(new Error('Operation produced a null result'));
           }
@@ -401,10 +452,12 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         };
         DBPutRequest.onsuccess = () => {
           if (DBPutRequest != null) {
-            resolve({
+            const mergedResult: Authors = {
               ...arg,
               id: DBPutRequest.result,
-            });
+            };
+            this._push('put', mergedResult);
+            resolve(mergedResult);
           } else {
             reject(new Error('Operation produced a null result'));
           }
@@ -421,12 +474,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         const tx =
           options?.transaction ?? db.transaction(['Authors'], 'readwrite');
         const store = tx.objectStore('Authors');
-        let DBDeleteRequest: IDBRequest | null = null;
-        if (isAuthorsIdIndex(arg)) {
-          DBDeleteRequest = store.delete(arg.id);
-        } else {
-          DBDeleteRequest = store.delete(arg);
-        }
+        const idToDelete: number = isAuthorsIdIndex(arg) ? arg.id : arg;
+        const DBDeleteRequest: IDBRequest = store.delete(idToDelete);
         if (DBDeleteRequest != null) {
           DBDeleteRequest.onerror = () => {
             if (DBDeleteRequest != null) {
@@ -438,6 +487,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             }
           };
           DBDeleteRequest.onsuccess = () => {
+            this._push('delete', idToDelete);
             resolve(undefined);
           };
         } else {
@@ -737,7 +787,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
     }
   }
   const authorsClient = new AuthorsClientImpl();
-  class PostsClientImpl {
+  class PostsClientImpl extends Observable<Post, string> {
     static tablesForTransaction: ReadonlyArray<string> = ['Posts', 'Authors'];
     add(
       arg: PostsAddArgs,
@@ -797,11 +847,13 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         };
         DBAddRequest.onsuccess = () => {
           if (DBAddRequest != null) {
-            resolve({
+            const mergedResult: Post = {
               ...arg,
               author: authorsId,
               postId: DBAddRequest.result,
-            });
+            };
+            this._push('add', mergedResult);
+            resolve(mergedResult);
           } else {
             reject(new Error('Operation produced a null result'));
           }
@@ -866,11 +918,13 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         };
         DBPutRequest.onsuccess = () => {
           if (DBPutRequest != null) {
-            resolve({
+            const mergedResult: Post = {
               ...arg,
               author: authorsId,
               postId: DBPutRequest.result,
-            });
+            };
+            this._push('put', mergedResult);
+            resolve(mergedResult);
           } else {
             reject(new Error('Operation produced a null result'));
           }
@@ -896,12 +950,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             'readwrite',
           );
         const store = tx.objectStore('Posts');
-        let DBDeleteRequest: IDBRequest | null = null;
-        if (isPostsPostIdIndex(arg)) {
-          DBDeleteRequest = store.delete(arg.postId);
-        } else {
-          DBDeleteRequest = store.delete(arg);
-        }
+        const idToDelete: string = isPostsPostIdIndex(arg) ? arg.postId : arg;
+        const DBDeleteRequest: IDBRequest = store.delete(idToDelete);
         if (DBDeleteRequest != null) {
           DBDeleteRequest.onerror = () => {
             if (DBDeleteRequest != null) {
@@ -913,6 +963,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             }
           };
           DBDeleteRequest.onsuccess = () => {
+            this._push('delete', idToDelete);
             resolve(undefined);
           };
         } else {
