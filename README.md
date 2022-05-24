@@ -308,53 +308,45 @@ Calling the exported `init` function returns our database client. This client cu
 ### add
 
 ```
-
-await db.posts.add({
-title: 'Test',
-content: 'Some content',
-author: 1,
+const addedPost = await db.posts.add({
+  title: 'Test',
+  content: 'Some content',
+  author: 1,
 })
-
 ```
 
 ### put
 
 ```
-
-await db.posts.put({
-id: 4
-title: 'New Title',
-content: 'Some content',
-author: 1,
+const updatedPost = await db.posts.put({
+  id: 4
+  title: 'New Title',
+  content: 'Some content',
+  author: 1,
 })
-
 ```
 
 ### delete
 
 ```
-
 await db.posts.delete({
-id: 4,
+  id: 4,
 })
-
 ```
 
 ### get
 
 ```
-
-await db.posts.get({
-id: 4,
+const postWithJoins = await db.posts.get({
+  id: 4,
 })
-
 ```
 
 ### where
 
 ```
 
-await db.posts.where('title').isEqualTo('New Title')
+const postWithJoins = await db.posts.where('title').isEqualTo('New Title')
 
 ```
 
