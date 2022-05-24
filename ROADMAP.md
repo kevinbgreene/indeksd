@@ -13,7 +13,7 @@ cosnt pageThree: Array<PostsWithJoins> = page.next();
 const hasMore: boolean = page.hasMore();
 ```
 
-- **Version Enforcement** Compare schema changes to enforce bumping the database version when necessary. Possibly use a cache file or directory that could be committed to the repository to keep data needed to compare. Or use checksums in the generated files.
+- **Version Enforcement and Data Migration** Compare schema changes to enforce bumping the database version when necessary. Possibly use a cache file or directory that could be committed to the repository to keep data needed to compare. Or use checksums in the generated files.
 
 - **Schema Validation and Improved Debugging** Current debugging experience isn't great and it's possible to generate schemas that really shouldn't be valid. These errors appear at various times in the build process (some falling to TypeScript compilation) when they should be displayed to the user earlier with code pointers and suggestions.
 
@@ -34,8 +34,6 @@ database TodoDatabase {
 - **Cursor Support**
 
 - **Advanced Search** Support applying more complex predicates to table searches.
-
-- **Sorting** Currently searching on an index will naturally sort by that index... Allow sorting by arbitrary fields.
 
 - **Support Session and Local Storage** Could expand the schema to enable creation of type safe clients to store data in session and local storage. There would be different constraints, needing to be able to stringify objects as opposed to structured clone.
 

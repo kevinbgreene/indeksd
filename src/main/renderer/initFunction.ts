@@ -478,7 +478,9 @@ function createRemoveUnusedIndexesCall(
   database: DatabaseDefinition,
 ): ReadonlyArray<ts.Statement> {
   return database.body.map((table) => {
-    const indexesForTable = getIndexesForTableAsArray(table);
+    const indexesForTable = getIndexesForTableAsArray(table).filter((next) => {
+      return next.kind === 'index';
+    });
 
     return ts.factory.createExpressionStatement(
       ts.factory.createCallExpression(
