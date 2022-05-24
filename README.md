@@ -269,18 +269,99 @@ The supported methods are:
 
 The returned methods are type safe based on the index name provided. For example, if the index you provide is of type `string` you can't pass a `number`.
 
+## Subscriptions
+
+Often parts of your app will want to respond to database changes made in other parts of your app. To help facilitate this a `subscribe` method is exposed.
+
+The subscribe method takes two arguments:
+
+1. `eventName` - What kind of update are you interested in.
+   - `change` - Subscribe to all changes to a table.
+   - `add` - Subscribe when an object is added to a table.
+   - `put` - Subscribe when an object is updated in the table.
+   - `delete` - Subscribe when an object is deleted from the table.
+2. `callback` - A function to call when the updates you are interested in happen. This callback receives a `SubscriptionEvent`. The `SubscriptionEvent` has the following type:
+
+```
+type SubscriptionEvent<ItemType, PrimaryKeyType> = {
+  type: 'delete';
+  data: PrimaryKeyType;
+} | {
+  type: 'add' | 'put';
+  data: ItemType;
+}
+```
+
+An example usage:
+
+```
+db.posts.subscribe('add', (e) => {
+  const newListItem = renderPostListItem(e.data);
+  postList.append(newListItem);
+});
+```
+
 ## Client Operations
 
 Calling the exported `init` function returns our database client. This client currently only supports a subset of IndexedDB features.
 
 ### add
 
+```
+
+await db.posts.add({
+title: 'Test',
+content: 'Some content',
+author: 1,
+})
+
+```
+
 ### put
+
+```
+
+await db.posts.put({
+id: 4
+title: 'New Title',
+content: 'Some content',
+author: 1,
+})
+
+```
+
+### delete
+
+```
+
+await db.posts.delete({
+id: 4,
+})
+
+```
 
 ### get
 
+```
+
+await db.posts.get({
+id: 4,
+})
+
+```
+
 ### where
+
+```
+
+await db.posts.where('title').isEqualTo('New Title')
+
+```
 
 ### transaction
 
 This is just a wrappter around the built-in `db.transaction` function that provides a bit of typesafety by ensuring you only ask for transactions for tables defined in your schema.
+
+```
+
+```
