@@ -438,6 +438,16 @@ function createSubscribeMethodDeclaration(): ts.MethodDeclaration {
             true,
           ),
         ),
+        ts.factory.createExpressionStatement(
+          ts.factory.createBinaryExpression(
+            ts.factory.createPropertyAccessExpression(
+              ts.factory.createThis(),
+              COMMON_IDENTIFIERS.nextId,
+            ),
+            ts.SyntaxKind.PlusEqualsToken,
+            ts.factory.createNumericLiteral(1),
+          ),
+        ),
       ],
       true,
     ),

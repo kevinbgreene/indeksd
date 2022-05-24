@@ -376,6 +376,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         innerMap.set(this.#nextId, callback);
         this.#listeners.set(eventName, innerMap);
       }
+      this.#nextId += 1;
     }
     _push(eventName: 'delete', data: PrimaryKeyType): void;
     _push(eventName: 'add' | 'put', data: ItemType): void;
