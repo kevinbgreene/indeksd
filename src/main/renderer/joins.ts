@@ -11,6 +11,7 @@ export function getItemNameWithJoinsForTable(table: TableDefinition): string {
 
 export type TableJoin = Readonly<{
   table: TableDefinition;
+  required: boolean;
   fieldName: string;
 }>;
 
@@ -25,6 +26,7 @@ export function getJoinsForTable(
       if (def?.kind === 'TableDefinition') {
         result.push({
           table: def,
+          required: field.required,
           fieldName: field.name.value,
         });
       }

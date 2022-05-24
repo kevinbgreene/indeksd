@@ -13,6 +13,12 @@ export function createTypeProperty(
   );
 }
 
+export function createNullType(): ts.TypeNode {
+  return ts.factory.createTypeReferenceNode(
+    ts.factory.createIdentifier('null'),
+  );
+}
+
 export function createNeverType(): ts.TypeNode {
   return ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.never);
 }

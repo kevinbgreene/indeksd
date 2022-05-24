@@ -12,7 +12,7 @@ import {
   createNewPromiseWithBody,
 } from '../helpers';
 import { getIndexesForTableAsArray, isPrimaryKey, TableIndex } from '../keys';
-import { typeForTypeNode } from '../types';
+import { createNullType, typeForTypeNode } from '../types';
 import { capitalize } from '../utils';
 import { clientVariableNameForTable, createOnErrorHandler } from './common';
 import { createGetObjectStore } from './objectStore';
@@ -898,6 +898,95 @@ function createSafeHandlingForResult(
   );
 }
 
+function createClientCallForJoin(
+  variableName: ts.Identifier,
+  join: TableJoin,
+): ts.Expression {
+  const promiseCall = ts.factory.createCallExpression(
+    ts.factory.createPropertyAccessExpression(
+      ts.factory.createIdentifier(clientVariableNameForTable(join.table)),
+      COMMON_IDENTIFIERS.get,
+    ),
+    undefined,
+    [
+      ts.factory.createPropertyAccessExpression(variableName, join.fieldName),
+      ts.factory.createObjectLiteralExpression([
+        ts.factory.createPropertyAssignment(
+          COMMON_IDENTIFIERS.transaction,
+          COMMON_IDENTIFIERS.tx,
+        ),
+      ]),
+    ],
+  );
+
+  if (join.required) {
+    return promiseCall;
+  } else {
+    return ts.factory.createConditionalExpression(
+      ts.factory.createBinaryExpression(
+        ts.factory.createPropertyAccessExpression(variableName, join.fieldName),
+        ts.SyntaxKind.EqualsEqualsToken,
+        ts.factory.createNull(),
+      ),
+      undefined,
+      ts.factory.createCallExpression(
+        ts.factory.createPropertyAccessExpression(
+          COMMON_IDENTIFIERS.Promise,
+          COMMON_IDENTIFIERS.resolve,
+        ),
+        [createNullType()],
+        [ts.factory.createNull()],
+      ),
+      undefined,
+      promiseCall,
+    );
+  }
+}
+
+function createReturnObjectLiteral(
+  variableName: ts.Identifier,
+  table: TableDefinition,
+  joins: ReadonlyArray<TableJoin>,
+): ts.Expression {
+  return ts.factory.createAsExpression(
+    ts.factory.createObjectLiteralExpression(
+      [
+        ts.factory.createSpreadAssignment(variableName),
+        ...joins.map((next) => {
+          const shorthand = ts.factory.createShorthandPropertyAssignment(
+            ts.factory.createIdentifier(next.fieldName),
+            undefined,
+          );
+
+          if (next.required) {
+            return shorthand;
+          } else {
+            return ts.factory.createSpreadAssignment(
+              ts.factory.createConditionalExpression(
+                ts.factory.createBinaryExpression(
+                  ts.factory.createIdentifier(next.fieldName),
+                  ts.SyntaxKind.EqualsEqualsToken,
+                  ts.factory.createNull(),
+                ),
+                undefined,
+                ts.factory.createObjectLiteralExpression([]),
+                undefined,
+                ts.factory.createObjectLiteralExpression([shorthand]),
+              ),
+            );
+          }
+        }),
+      ],
+      true,
+    ),
+    createItemTypeNodeForTable({
+      table,
+      asArray: false,
+      withJoins: true,
+    }),
+  );
+}
+
 function createHandlingForGetWithJoin({
   table,
   joins,
@@ -913,27 +1002,7 @@ function createHandlingForGetWithJoin({
           [
             ts.factory.createArrayLiteralExpression(
               joins.map((next) => {
-                return ts.factory.createCallExpression(
-                  ts.factory.createPropertyAccessExpression(
-                    ts.factory.createIdentifier(
-                      clientVariableNameForTable(next.table),
-                    ),
-                    COMMON_IDENTIFIERS.get,
-                  ),
-                  undefined,
-                  [
-                    ts.factory.createPropertyAccessExpression(
-                      resultVariableName(table),
-                      next.fieldName,
-                    ),
-                    ts.factory.createObjectLiteralExpression([
-                      ts.factory.createPropertyAssignment(
-                        COMMON_IDENTIFIERS.transaction,
-                        COMMON_IDENTIFIERS.tx,
-                      ),
-                    ]),
-                  ],
-                );
+                return createClientCallForJoin(resultVariableName(table), next);
               }),
               true,
             ),
@@ -967,19 +1036,10 @@ function createHandlingForGetWithJoin({
                     COMMON_IDENTIFIERS.resolve,
                     undefined,
                     [
-                      ts.factory.createObjectLiteralExpression(
-                        [
-                          ts.factory.createSpreadAssignment(
-                            resultVariableName(table),
-                          ),
-                          ...joins.map((next) => {
-                            return ts.factory.createShorthandPropertyAssignment(
-                              ts.factory.createIdentifier(next.fieldName),
-                              undefined,
-                            );
-                          }),
-                        ],
-                        true,
+                      createReturnObjectLiteral(
+                        resultVariableName(table),
+                        table,
+                        joins,
                       ),
                     ],
                   ),
@@ -1035,20 +1095,9 @@ function createHandlingForGetAllWithJoin({
                             [
                               ts.factory.createArrayLiteralExpression(
                                 joins.map((next) => {
-                                  return ts.factory.createCallExpression(
-                                    ts.factory.createPropertyAccessExpression(
-                                      ts.factory.createIdentifier(
-                                        clientVariableNameForTable(next.table),
-                                      ),
-                                      COMMON_IDENTIFIERS.get,
-                                    ),
-                                    undefined,
-                                    [
-                                      ts.factory.createPropertyAccessExpression(
-                                        COMMON_IDENTIFIERS.result,
-                                        next.fieldName,
-                                      ),
-                                    ],
+                                  return createClientCallForJoin(
+                                    COMMON_IDENTIFIERS.result,
+                                    next,
                                   );
                                 }),
                                 true,
@@ -1079,21 +1128,10 @@ function createHandlingForGetAllWithJoin({
                               ts.factory.createBlock(
                                 [
                                   ts.factory.createReturnStatement(
-                                    ts.factory.createObjectLiteralExpression(
-                                      [
-                                        ts.factory.createSpreadAssignment(
-                                          COMMON_IDENTIFIERS.result,
-                                        ),
-                                        ...joins.map((next) => {
-                                          return ts.factory.createShorthandPropertyAssignment(
-                                            ts.factory.createIdentifier(
-                                              next.fieldName,
-                                            ),
-                                            undefined,
-                                          );
-                                        }),
-                                      ],
-                                      true,
+                                    createReturnObjectLiteral(
+                                      COMMON_IDENTIFIERS.result,
+                                      table,
+                                      joins,
                                     ),
                                   ),
                                 ],

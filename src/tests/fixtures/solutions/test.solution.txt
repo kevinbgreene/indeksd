@@ -13,20 +13,32 @@ export type Authors = {
   name: string;
   email: string;
 };
+export type Status = {
+  id: string;
+  displayName: string;
+};
 export type Post = {
   postId: string;
   name: string;
   content?: string;
   author: number;
+  status?: string;
 };
 export type PostWithJoins = {
   postId: string;
   name: string;
   content?: string;
   author: Authors;
+  status?: Status;
 };
 export type AuthorsIndexes = 'id' | 'name' | 'email';
-export type PostsIndexes = 'postId' | 'name' | 'name_author' | 'author';
+export type StatusIndexes = 'id';
+export type PostsIndexes =
+  | 'postId'
+  | 'name'
+  | 'name_author'
+  | 'author'
+  | 'status';
 export type AuthorsWhereQueryType<IndexName extends AuthorsIndexes> =
   IndexName extends 'id'
     ? number
@@ -35,6 +47,8 @@ export type AuthorsWhereQueryType<IndexName extends AuthorsIndexes> =
     : IndexName extends 'email'
     ? string
     : never;
+export type StatusWhereQueryType<IndexName extends StatusIndexes> =
+  IndexName extends 'id' ? string : never;
 export type PostsWhereQueryType<IndexName extends PostsIndexes> =
   IndexName extends 'postId'
     ? string
@@ -47,16 +61,23 @@ export type PostsWhereQueryType<IndexName extends PostsIndexes> =
       }
     : IndexName extends 'author'
     ? number
+    : IndexName extends 'status'
+    ? string
     : never;
 export type AuthorsAddArgs = {
   name: string;
   email: string;
+};
+export type StatusAddArgs = {
+  id: string;
+  displayName: string;
 };
 export type PostsAddArgs = {
   postId: string;
   name: string;
   content?: string;
   author: number | AuthorsPutArgs;
+  status?: string | StatusPutArgs;
 };
 export type AuthorsPutArgs =
   | AuthorsAddArgs
@@ -65,6 +86,12 @@ export type AuthorsPutArgs =
       name: string;
       email: string;
     };
+export type StatusPutArgs =
+  | StatusAddArgs
+  | {
+      id: string;
+      displayName: string;
+    };
 export type PostsPutArgs =
   | PostsAddArgs
   | {
@@ -72,11 +99,17 @@ export type PostsPutArgs =
       name: string;
       content?: string;
       author: number | AuthorsPutArgs;
+      status?: string | StatusPutArgs;
     };
 export type AuthorsDeleteArgs =
   | number
   | {
       id: number;
+    };
+export type StatusDeleteArgs =
+  | string
+  | {
+      id: string;
     };
 export type PostsDeleteArgs =
   | string
@@ -94,6 +127,11 @@ export type AuthorsGetArgs =
   | {
       email: string;
     };
+export type StatusGetArgs =
+  | string
+  | {
+      id: string;
+    };
 export type PostsGetArgs =
   | string
   | {
@@ -108,6 +146,9 @@ export type PostsGetArgs =
     }
   | {
       author: number;
+    }
+  | {
+      status: string;
     };
 const isAuthorsIdIndex = (
   arg?: AuthorsGetArgs,
@@ -140,6 +181,17 @@ const isAuthorsEmailIndex = (
     typeof arg === 'object' &&
     Object.keys(arg).length === 1 &&
     Reflect.has(arg, 'email')
+  );
+};
+const isStatusIdIndex = (
+  arg?: StatusGetArgs,
+): arg is {
+  id: string;
+} => {
+  return (
+    typeof arg === 'object' &&
+    Object.keys(arg).length === 1 &&
+    Reflect.has(arg, 'id')
   );
 };
 const isPostsPostIdIndex = (
@@ -186,6 +238,17 @@ const isPostsAuthorIndex = (
     typeof arg === 'object' &&
     Object.keys(arg).length === 1 &&
     Reflect.has(arg, 'author')
+  );
+};
+const isPostsStatusIndex = (
+  arg?: PostsGetArgs,
+): arg is {
+  status: string;
+} => {
+  return (
+    typeof arg === 'object' &&
+    Object.keys(arg).length === 1 &&
+    Reflect.has(arg, 'status')
   );
 };
 type RangeQuery<ArgType, ReturnType> = {
@@ -250,6 +313,52 @@ export type AuthorsClient = {
       count?: number;
     },
   ): Promise<ReadonlyArray<Authors>>;
+};
+export type StatusClient = {
+  subscribe(
+    eventName: 'change' | 'add' | 'put' | 'delete',
+    callback: (event: SubscriptionEvent<Status, string>) => void,
+  ): void;
+  add(
+    arg: StatusAddArgs,
+    options?: {
+      transaction?: IDBTransaction;
+    },
+  ): Promise<Status>;
+  put(
+    arg: StatusPutArgs,
+    options?: {
+      transaction?: IDBTransaction;
+    },
+  ): Promise<Status>;
+  delete(
+    arg: StatusDeleteArgs,
+    options?: {
+      transaction?: IDBTransaction;
+    },
+  ): Promise<void>;
+  get(
+    arg: StatusGetArgs,
+    options?: {
+      transaction?: IDBTransaction;
+    },
+  ): Promise<Status>;
+  where<IndexName extends StatusIndexes>(
+    indexName: IndexName,
+    options?: {
+      transaction?: IDBTransaction;
+    },
+  ): RangeQuery<
+    StatusWhereQueryType<IndexName>,
+    Promise<ReadonlyArray<Status>>
+  >;
+  sortBy(
+    indexName: StatusIndexes,
+    options?: {
+      transaction?: IDBTransaction;
+      count?: number;
+    },
+  ): Promise<ReadonlyArray<Status>>;
 };
 export type PostsClient = {
   subscribe(
@@ -349,10 +458,11 @@ export type PostsClient = {
 };
 export type MyDatabaseClient = {
   transaction: (
-    storeNames: Array<'Authors' | 'Posts'>,
+    storeNames: Array<'Authors' | 'Status' | 'Posts'>,
     mode?: IDBTransactionMode,
   ) => IDBTransaction;
   authors: AuthorsClient;
+  status: StatusClient;
   posts: PostsClient;
 };
 function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
@@ -428,7 +538,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             const mergedResult: Authors = {
               ...arg,
               id: DBAddRequest.result,
-            };
+            } as Authors;
             this._push('add', mergedResult);
             resolve(mergedResult);
           } else {
@@ -465,7 +575,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             const mergedResult: Authors = {
               ...arg,
               id: DBPutRequest.result,
-            };
+            } as Authors;
             this._push('put', mergedResult);
             resolve(mergedResult);
           } else {
@@ -797,8 +907,325 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
     }
   }
   const authorsClient = new AuthorsClientImpl();
+  class StatusClientImpl extends Observable<Status, string> {
+    static tablesForTransaction: ReadonlyArray<string> = ['Status'];
+    add(
+      arg: StatusAddArgs,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<Status> {
+      return new Promise(async (resolve, reject) => {
+        const tx =
+          options?.transaction ?? db.transaction(['Status'], 'readwrite');
+        const store = tx.objectStore('Status');
+        const [] = await Promise.all([]);
+        const DBAddRequest: IDBRequest = store.add({
+          ...arg,
+        });
+        DBAddRequest.onerror = () => {
+          if (DBAddRequest != null) {
+            reject(DBAddRequest.error);
+          } else {
+            reject(
+              new Error('Unknown error occurred trying to perform operation'),
+            );
+          }
+        };
+        DBAddRequest.onsuccess = () => {
+          if (DBAddRequest != null) {
+            const mergedResult: Status = {
+              ...arg,
+              id: DBAddRequest.result,
+            } as Status;
+            this._push('add', mergedResult);
+            resolve(mergedResult);
+          } else {
+            reject(new Error('Operation produced a null result'));
+          }
+        };
+      });
+    }
+    put(
+      arg: StatusPutArgs,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<Status> {
+      return new Promise(async (resolve, reject) => {
+        const tx =
+          options?.transaction ?? db.transaction(['Status'], 'readwrite');
+        const store = tx.objectStore('Status');
+        const [] = await Promise.all([]);
+        const DBPutRequest: IDBRequest = store.put({
+          ...arg,
+        });
+        DBPutRequest.onerror = () => {
+          if (DBPutRequest != null) {
+            reject(DBPutRequest.error);
+          } else {
+            reject(
+              new Error('Unknown error occurred trying to perform operation'),
+            );
+          }
+        };
+        DBPutRequest.onsuccess = () => {
+          if (DBPutRequest != null) {
+            const mergedResult: Status = {
+              ...arg,
+              id: DBPutRequest.result,
+            } as Status;
+            this._push('put', mergedResult);
+            resolve(mergedResult);
+          } else {
+            reject(new Error('Operation produced a null result'));
+          }
+        };
+      });
+    }
+    delete(
+      arg: StatusDeleteArgs,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<void> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ?? db.transaction(['Status'], 'readwrite');
+        const store = tx.objectStore('Status');
+        const idToDelete: string = isStatusIdIndex(arg) ? arg.id : arg;
+        const DBDeleteRequest: IDBRequest = store.delete(idToDelete);
+        if (DBDeleteRequest != null) {
+          DBDeleteRequest.onerror = () => {
+            if (DBDeleteRequest != null) {
+              reject(DBDeleteRequest.error);
+            } else {
+              reject(
+                new Error('Unknown error occurred trying to perform operation'),
+              );
+            }
+          };
+          DBDeleteRequest.onsuccess = () => {
+            this._push('delete', idToDelete);
+            resolve(undefined);
+          };
+        } else {
+          reject(new Error('No available index for given query'));
+        }
+      });
+    }
+    get(
+      arg: StatusGetArgs,
+      options?: {
+        transaction?: IDBTransaction;
+      },
+    ): Promise<Status> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ?? db.transaction(['Status'], 'readonly');
+        const store = tx.objectStore('Status');
+        let DBGetRequest: IDBRequest | null = null;
+        if (isStatusIdIndex(arg)) {
+          DBGetRequest = store.get(arg.id);
+        } else {
+          DBGetRequest = store.get(arg);
+        }
+        if (DBGetRequest != null) {
+          DBGetRequest.onerror = () => {
+            if (DBGetRequest != null) {
+              reject(DBGetRequest.error);
+            } else {
+              reject(
+                new Error('Unknown error occurred trying to perform operation'),
+              );
+            }
+          };
+          DBGetRequest.onsuccess = () => {
+            if (DBGetRequest != null && DBGetRequest.result != null) {
+              resolve((DBGetRequest as IDBRequest).result);
+            } else {
+              reject(new Error('No result found for query'));
+            }
+          };
+        } else {
+          reject(new Error('No available index for given query'));
+        }
+      });
+    }
+    where<IndexName extends StatusIndexes>(
+      indexName: IndexName,
+      options: {
+        transaction?: IDBTransaction;
+        withJoins: false;
+      },
+    ): RangeQuery<
+      StatusWhereQueryType<IndexName>,
+      Promise<ReadonlyArray<Status>>
+    > {
+      const tx = options?.transaction ?? db.transaction(['Status'], 'readonly');
+      const store = tx.objectStore('Status');
+      const executeQuery = (
+        target: IDBObjectStore | IDBIndex,
+        range: IDBKeyRange,
+      ) => {
+        return new Promise<ReadonlyArray<Status>>(async (resolve, reject) => {
+          const DBGetRequest: IDBRequest = target.getAll(range);
+          if (DBGetRequest != null) {
+            DBGetRequest.onerror = () => {
+              if (DBGetRequest != null) {
+                reject(DBGetRequest.error);
+              } else {
+                reject(
+                  new Error(
+                    'Unknown error occurred trying to perform operation',
+                  ),
+                );
+              }
+            };
+            DBGetRequest.onsuccess = () => {
+              if (DBGetRequest != null && DBGetRequest.result != null) {
+                resolve((DBGetRequest as IDBRequest).result);
+              } else {
+                reject(new Error('No result found for query'));
+              }
+            };
+          } else {
+            reject(new Error('No available index for given query'));
+          }
+        });
+      };
+      return {
+        isGreaterThan(query) {
+          switch (indexName) {
+            case 'id': {
+              return executeQuery(store, IDBKeyRange.lowerBound(query, true));
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isGreaterThanOrEqualTo(query) {
+          switch (indexName) {
+            case 'id': {
+              return executeQuery(store, IDBKeyRange.lowerBound(query, false));
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isLessThan(query) {
+          switch (indexName) {
+            case 'id': {
+              return executeQuery(store, IDBKeyRange.upperBound(query, true));
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isLessThanOrEqualTo(query) {
+          switch (indexName) {
+            case 'id': {
+              return executeQuery(store, IDBKeyRange.upperBound(query, false));
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isBetween(query) {
+          switch (indexName) {
+            case 'id': {
+              return executeQuery(
+                store,
+                IDBKeyRange.bound(query.from, query.to, false, false),
+              );
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+        isEqualTo(query) {
+          switch (indexName) {
+            case 'id': {
+              return executeQuery(store, IDBKeyRange.only(query));
+            }
+            default: {
+              return Promise.reject(
+                new Error('Trying to run query on unknown index: ' + indexName),
+              );
+            }
+          }
+        },
+      };
+    }
+    sortBy(
+      indexName: StatusIndexes,
+      options: {
+        transaction?: IDBTransaction;
+        withJoins: false;
+        count?: number;
+      },
+    ): Promise<ReadonlyArray<Status>> {
+      return new Promise((resolve, reject) => {
+        const tx =
+          options?.transaction ?? db.transaction(['Status'], 'readonly');
+        const store = tx.objectStore('Status');
+        let DBGetRequest: IDBRequest | null = null;
+        switch (indexName) {
+          case 'id': {
+            DBGetRequest = store.getAll(undefined, options?.count);
+            break;
+          }
+          default: {
+            return Promise.reject(
+              new Error('Trying to run query on unknown index: ' + indexName),
+            );
+          }
+        }
+        if (DBGetRequest != null) {
+          DBGetRequest.onerror = () => {
+            if (DBGetRequest != null) {
+              reject(DBGetRequest.error);
+            } else {
+              reject(
+                new Error('Unknown error occurred trying to perform operation'),
+              );
+            }
+          };
+          DBGetRequest.onsuccess = () => {
+            if (DBGetRequest != null && DBGetRequest.result != null) {
+              resolve((DBGetRequest as IDBRequest).result);
+            } else {
+              reject(new Error('No result found for query'));
+            }
+          };
+        } else {
+          reject(new Error('No available index for given query'));
+        }
+      });
+    }
+  }
+  const statusClient = new StatusClientImpl();
   class PostsClientImpl extends Observable<Post, string> {
-    static tablesForTransaction: ReadonlyArray<string> = ['Posts', 'Authors'];
+    static tablesForTransaction: ReadonlyArray<string> = [
+      'Posts',
+      'Authors',
+      'Status',
+    ];
     add(
       arg: PostsAddArgs,
       options?: {
@@ -812,15 +1239,18 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             Array.from(
               new Set([
                 ...AuthorsClientImpl.tablesForTransaction,
+                ...StatusClientImpl.tablesForTransaction,
                 ...PostsClientImpl.tablesForTransaction,
               ]),
             ),
             'readwrite',
           );
         const store = tx.objectStore('Posts');
-        const [authorsId] = await Promise.all([
-          new Promise<number>(async (resolve, reject) => {
-            if (typeof arg.author === 'number') {
+        const [authorsId, statusId] = await Promise.all([
+          new Promise<number | null>(async (resolve, reject) => {
+            if (arg.author == null) {
+              resolve(null);
+            } else if (typeof arg.author === 'number') {
               resolve(arg.author);
             } else {
               try {
@@ -828,6 +1258,22 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                   transaction: tx,
                 });
                 resolve(author.id);
+              } catch (error) {
+                reject(error);
+              }
+            }
+          }),
+          new Promise<string | null>(async (resolve, reject) => {
+            if (arg.status == null) {
+              resolve(null);
+            } else if (typeof arg.status === 'string') {
+              resolve(arg.status);
+            } else {
+              try {
+                const status = await statusClient.put(arg.status, {
+                  transaction: tx,
+                });
+                resolve(status.id);
               } catch (error) {
                 reject(error);
               }
@@ -845,6 +1291,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         const DBAddRequest: IDBRequest = store.add({
           ...arg,
           author: authorsId,
+          status: statusId,
         });
         DBAddRequest.onerror = () => {
           if (DBAddRequest != null) {
@@ -860,8 +1307,9 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             const mergedResult: Post = {
               ...arg,
               author: authorsId,
+              ...(statusId == null ? {} : { status: statusId }),
               postId: DBAddRequest.result,
-            };
+            } as Post;
             this._push('add', mergedResult);
             resolve(mergedResult);
           } else {
@@ -883,15 +1331,18 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             Array.from(
               new Set([
                 ...AuthorsClientImpl.tablesForTransaction,
+                ...StatusClientImpl.tablesForTransaction,
                 ...PostsClientImpl.tablesForTransaction,
               ]),
             ),
             'readwrite',
           );
         const store = tx.objectStore('Posts');
-        const [authorsId] = await Promise.all([
-          new Promise<number>(async (resolve, reject) => {
-            if (typeof arg.author === 'number') {
+        const [authorsId, statusId] = await Promise.all([
+          new Promise<number | null>(async (resolve, reject) => {
+            if (arg.author == null) {
+              resolve(null);
+            } else if (typeof arg.author === 'number') {
               resolve(arg.author);
             } else {
               try {
@@ -899,6 +1350,22 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                   transaction: tx,
                 });
                 resolve(author.id);
+              } catch (error) {
+                reject(error);
+              }
+            }
+          }),
+          new Promise<string | null>(async (resolve, reject) => {
+            if (arg.status == null) {
+              resolve(null);
+            } else if (typeof arg.status === 'string') {
+              resolve(arg.status);
+            } else {
+              try {
+                const status = await statusClient.put(arg.status, {
+                  transaction: tx,
+                });
+                resolve(status.id);
               } catch (error) {
                 reject(error);
               }
@@ -916,6 +1383,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         const DBPutRequest: IDBRequest = store.put({
           ...arg,
           author: authorsId,
+          status: statusId,
         });
         DBPutRequest.onerror = () => {
           if (DBPutRequest != null) {
@@ -931,8 +1399,9 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             const mergedResult: Post = {
               ...arg,
               author: authorsId,
+              ...(statusId == null ? {} : { status: statusId }),
               postId: DBPutRequest.result,
-            };
+            } as Post;
             this._push('put', mergedResult);
             resolve(mergedResult);
           } else {
@@ -954,6 +1423,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             Array.from(
               new Set([
                 ...AuthorsClientImpl.tablesForTransaction,
+                ...StatusClientImpl.tablesForTransaction,
                 ...PostsClientImpl.tablesForTransaction,
               ]),
             ),
@@ -1009,6 +1479,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                 Array.from(
                   new Set([
                     ...AuthorsClientImpl.tablesForTransaction,
+                    ...StatusClientImpl.tablesForTransaction,
                     ...PostsClientImpl.tablesForTransaction,
                   ]),
                 ),
@@ -1028,6 +1499,9 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         } else if (isPostsAuthorIndex(arg)) {
           const index: IDBIndex = store.index('author');
           DBGetRequest = index.get([arg.author]);
+        } else if (isPostsStatusIndex(arg)) {
+          const index: IDBIndex = store.index('status');
+          DBGetRequest = index.get([arg.status]);
         } else {
           DBGetRequest = store.get(arg);
         }
@@ -1047,11 +1521,15 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
               if (options?.withJoins != false) {
                 Promise.all([
                   authorsClient.get(post.author, { transaction: tx }),
-                ]).then(([author]) => {
+                  post.status == null
+                    ? Promise.resolve<null>(null)
+                    : statusClient.get(post.status, { transaction: tx }),
+                ]).then(([author, status]) => {
                   resolve({
                     ...post,
                     author,
-                  });
+                    ...(status == null ? {} : { status }),
+                  } as PostWithJoins);
                 });
               } else {
                 resolve(post);
@@ -1098,6 +1576,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
               Array.from(
                 new Set([
                   ...AuthorsClientImpl.tablesForTransaction,
+                  ...StatusClientImpl.tablesForTransaction,
                   ...PostsClientImpl.tablesForTransaction,
                 ]),
               ),
@@ -1132,12 +1611,18 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                     Promise.all(
                       post.map((result) => {
                         return Promise.all([
-                          authorsClient.get(result.author),
-                        ]).then(([author]) => {
+                          authorsClient.get(result.author, { transaction: tx }),
+                          result.status == null
+                            ? Promise.resolve<null>(null)
+                            : statusClient.get(result.status, {
+                                transaction: tx,
+                              }),
+                        ]).then(([author, status]) => {
                           return {
                             ...result,
                             author,
-                          };
+                            ...(status == null ? {} : { status }),
+                          } as PostWithJoins;
                         });
                       }),
                     ).then((result: ReadonlyArray<PostWithJoins>) => {
@@ -1196,6 +1681,12 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                 IDBKeyRange.lowerBound(query, true),
               );
             }
+            case 'status': {
+              return executeQuery(
+                store.index('status'),
+                IDBKeyRange.lowerBound(query, true),
+              );
+            }
             default: {
               return Promise.reject(
                 new Error('Trying to run query on unknown index: ' + indexName),
@@ -1239,6 +1730,12 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             case 'author': {
               return executeQuery(
                 store.index('author'),
+                IDBKeyRange.lowerBound(query, false),
+              );
+            }
+            case 'status': {
+              return executeQuery(
+                store.index('status'),
                 IDBKeyRange.lowerBound(query, false),
               );
             }
@@ -1288,6 +1785,12 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                 IDBKeyRange.upperBound(query, true),
               );
             }
+            case 'status': {
+              return executeQuery(
+                store.index('status'),
+                IDBKeyRange.upperBound(query, true),
+              );
+            }
             default: {
               return Promise.reject(
                 new Error('Trying to run query on unknown index: ' + indexName),
@@ -1331,6 +1834,12 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             case 'author': {
               return executeQuery(
                 store.index('author'),
+                IDBKeyRange.upperBound(query, false),
+              );
+            }
+            case 'status': {
+              return executeQuery(
+                store.index('status'),
                 IDBKeyRange.upperBound(query, false),
               );
             }
@@ -1398,6 +1907,12 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                 IDBKeyRange.bound(query.from, query.to, false, false),
               );
             }
+            case 'status': {
+              return executeQuery(
+                store.index('status'),
+                IDBKeyRange.bound(query.from, query.to, false, false),
+              );
+            }
             default: {
               return Promise.reject(
                 new Error('Trying to run query on unknown index: ' + indexName),
@@ -1435,6 +1950,12 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             case 'author': {
               return executeQuery(
                 store.index('author'),
+                IDBKeyRange.only(query),
+              );
+            }
+            case 'status': {
+              return executeQuery(
+                store.index('status'),
                 IDBKeyRange.only(query),
               );
             }
@@ -1478,6 +1999,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
                 Array.from(
                   new Set([
                     ...AuthorsClientImpl.tablesForTransaction,
+                    ...StatusClientImpl.tablesForTransaction,
                     ...PostsClientImpl.tablesForTransaction,
                   ]),
                 ),
@@ -1506,6 +2028,11 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             DBGetRequest = index.getAll(undefined, options?.count);
             break;
           }
+          case 'status': {
+            const index: IDBIndex = store.index('status');
+            DBGetRequest = index.getAll(undefined, options?.count);
+            break;
+          }
           default: {
             return Promise.reject(
               new Error('Trying to run query on unknown index: ' + indexName),
@@ -1529,14 +2056,18 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
               if (options?.withJoins != false) {
                 Promise.all(
                   post.map((result) => {
-                    return Promise.all([authorsClient.get(result.author)]).then(
-                      ([author]) => {
-                        return {
-                          ...result,
-                          author,
-                        };
-                      },
-                    );
+                    return Promise.all([
+                      authorsClient.get(result.author, { transaction: tx }),
+                      result.status == null
+                        ? Promise.resolve<null>(null)
+                        : statusClient.get(result.status, { transaction: tx }),
+                    ]).then(([author, status]) => {
+                      return {
+                        ...result,
+                        author,
+                        ...(status == null ? {} : { status }),
+                      } as PostWithJoins;
+                    });
                   }),
                 ).then((result: ReadonlyArray<PostWithJoins>) => {
                   resolve(result);
@@ -1557,12 +2088,13 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
   const postsClient = new PostsClientImpl();
   return {
     transaction: (
-      storeNames: Array<'Authors' | 'Posts'>,
+      storeNames: Array<'Authors' | 'Status' | 'Posts'>,
       mode?: IDBTransactionMode,
     ): IDBTransaction => {
       return db.transaction(storeNames, mode);
     },
     authors: authorsClient,
+    status: statusClient,
     posts: postsClient,
   };
 }
@@ -1620,13 +2152,16 @@ export function init(): Promise<MyDatabaseClient> {
         keyPath: 'id',
         autoIncrement: true,
       });
+      const StatusStore = createObjectStore(db, 'Status', { keyPath: 'id' });
       const PostsStore = createObjectStore(db, 'Posts', { keyPath: 'postId' });
       removeUnusedIndexes(AuthorsStore, ['id', 'name', 'email']);
+      removeUnusedIndexes(StatusStore, ['id']);
       removeUnusedIndexes(PostsStore, [
         'postId',
         'name',
         'name_author',
         'author',
+        'status',
       ]);
       createIndex(AuthorsStore, 'name', ['name'], { unique: false });
       createIndex(AuthorsStore, 'email', ['email'], { unique: true });
@@ -1635,6 +2170,7 @@ export function init(): Promise<MyDatabaseClient> {
         unique: false,
       });
       createIndex(PostsStore, 'author', ['author'], { unique: false });
+      createIndex(PostsStore, 'status', ['status'], { unique: false });
     };
   });
 }

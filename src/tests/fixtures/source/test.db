@@ -17,11 +17,17 @@ database MyDatabase @version(3) {
     @index @unique email: string;
   }
 
+  table Status {
+    @key id: string;
+    displayName: string;
+  }
+
   table Posts @item("Post") {
     @key postId: string;
     @index("name") @index("name_author") name: string;
     content?: string;
     @index @index("name_author") author: Authors;
+    @index status?: Status;
   }
 
 }
