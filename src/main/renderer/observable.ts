@@ -6,13 +6,23 @@ import { COMMON_IDENTIFIERS } from './identifiers';
 import { getPrimaryKeyTypeForTable } from './keys';
 import { createNumberType, createStringType, createVoidType } from './types';
 
-function createSubscriptionCallbackType(
+function createSubscriptionEventTypeReference(
   itemType: ts.TypeNode = ts.factory.createTypeReferenceNode(
     COMMON_IDENTIFIERS.ItemType,
   ),
   keyType: ts.TypeNode = ts.factory.createTypeReferenceNode(
     COMMON_IDENTIFIERS.PrimaryKeyType,
   ),
+): ts.TypeReferenceNode {
+  return ts.factory.createTypeReferenceNode(
+    COMMON_IDENTIFIERS.SubscriptionEvent,
+    [itemType, keyType],
+  );
+}
+
+function createSubscriptionCallbackType(
+  itemType?: ts.TypeNode,
+  keyType?: ts.TypeNode,
 ): ts.TypeNode {
   return ts.factory.createFunctionTypeNode(
     undefined,
@@ -23,10 +33,7 @@ function createSubscriptionCallbackType(
         undefined,
         COMMON_IDENTIFIERS.event,
         undefined,
-        ts.factory.createTypeReferenceNode(
-          COMMON_IDENTIFIERS.SubscriptionEvent,
-          [itemType, keyType],
-        ),
+        createSubscriptionEventTypeReference(itemType, keyType),
       ),
     ],
     createVoidType(),
@@ -167,7 +174,17 @@ export function createObservableClass(): ts.ClassDeclaration {
             undefined,
             COMMON_IDENTIFIERS.eventName,
             undefined,
-            undefined,
+            ts.factory.createUnionTypeNode([
+              ts.factory.createLiteralTypeNode(
+                ts.factory.createStringLiteral('add'),
+              ),
+              ts.factory.createLiteralTypeNode(
+                ts.factory.createStringLiteral('put'),
+              ),
+              ts.factory.createLiteralTypeNode(
+                ts.factory.createStringLiteral('delete'),
+              ),
+            ]),
             undefined,
           ),
           ts.factory.createParameterDeclaration(
@@ -176,7 +193,12 @@ export function createObservableClass(): ts.ClassDeclaration {
             undefined,
             COMMON_IDENTIFIERS.data,
             undefined,
-            undefined,
+            ts.factory.createUnionTypeNode([
+              ts.factory.createTypeReferenceNode(COMMON_IDENTIFIERS.ItemType),
+              ts.factory.createTypeReferenceNode(
+                COMMON_IDENTIFIERS.PrimaryKeyType,
+              ),
+            ]),
             undefined,
           ),
         ],
@@ -446,15 +468,18 @@ function createNotifyListenersFunction(): ts.ArrowFunction {
             COMMON_IDENTIFIERS.callback,
             undefined,
             [
-              ts.factory.createObjectLiteralExpression([
-                ts.factory.createPropertyAssignment(
-                  COMMON_IDENTIFIERS.type,
-                  COMMON_IDENTIFIERS.eventName,
-                ),
-                ts.factory.createShorthandPropertyAssignment(
-                  COMMON_IDENTIFIERS.data,
-                ),
-              ]),
+              ts.factory.createAsExpression(
+                ts.factory.createObjectLiteralExpression([
+                  ts.factory.createPropertyAssignment(
+                    COMMON_IDENTIFIERS.type,
+                    COMMON_IDENTIFIERS.eventName,
+                  ),
+                  ts.factory.createShorthandPropertyAssignment(
+                    COMMON_IDENTIFIERS.data,
+                  ),
+                ]),
+                createSubscriptionEventTypeReference(),
+              ),
             ],
           ),
         ),

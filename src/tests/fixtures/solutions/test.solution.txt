@@ -379,12 +379,21 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
     }
     _push(eventName: 'delete', data: PrimaryKeyType): void;
     _push(eventName: 'add' | 'put', data: ItemType): void;
-    _push(eventName, data): void {
+    _push(
+      eventName: 'add' | 'put' | 'delete',
+      data: ItemType | PrimaryKeyType,
+    ): void {
       this.#listeners.get('change')?.forEach((callback) => {
-        callback({ type: eventName, data });
+        callback({ type: eventName, data } as SubscriptionEvent<
+          ItemType,
+          PrimaryKeyType
+        >);
       });
       this.#listeners.get(eventName)?.forEach((callback) => {
-        callback({ type: eventName, data });
+        callback({ type: eventName, data } as SubscriptionEvent<
+          ItemType,
+          PrimaryKeyType
+        >);
       });
     }
   }
