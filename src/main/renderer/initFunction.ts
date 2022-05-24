@@ -15,7 +15,6 @@ import {
   annotationsFromList,
   getIndexesForTable,
   getIndexesForTableAsArray,
-  getIndexFieldsForTable,
   getPrimaryKeyFieldForTable,
   isAutoIncrementField,
   TableIndex,
@@ -142,7 +141,6 @@ function createCreateObjectStoresCall(
   database: DatabaseDefinition,
 ): ReadonlyArray<ts.Statement> {
   return database.body.map((next) => {
-    const indexesForTable = getIndexFieldsForTable(next);
     const objectStore = ts.factory.createCallExpression(
       COMMON_IDENTIFIERS.createObjectStore,
       undefined,
@@ -153,13 +151,11 @@ function createCreateObjectStoresCall(
       ],
     );
 
-    return indexesForTable.length > 0
-      ? createConstStatement(
-          identifierForObjectStore(next),
-          undefined,
-          objectStore,
-        )
-      : ts.factory.createExpressionStatement(objectStore);
+    return createConstStatement(
+      identifierForObjectStore(next),
+      undefined,
+      objectStore,
+    );
   });
 }
 
