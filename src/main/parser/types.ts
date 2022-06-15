@@ -14,7 +14,7 @@ export interface TextLocation {
 }
 
 export interface SyntaxNode extends Node {
-  loc: TextLocation;
+  location: TextLocation;
 }
 
 export interface Token extends SyntaxNode {
@@ -109,14 +109,32 @@ export interface FieldDefinition extends SyntaxNode {
   annotations: Annotations;
   name: Identifier;
   required: boolean;
+  defaultValue: Expression | null;
   type: TypeNode;
+}
+
+export interface ObjectLiteralElement extends SyntaxNode {
+  kind: 'ObjectLiteralElement';
+  key: Identifier;
+  value: Expression;
+}
+export interface ObjectLiteral extends SyntaxNode {
+  kind: 'ObjectLiteral';
+  elements: ReadonlyArray<ObjectLiteralElement>;
+}
+export interface ArrayLiteral extends SyntaxNode {
+  kind: 'ArrayLiteral';
+  items: ReadonlyArray<Expression>;
 }
 
 export type Expression =
   | StringLiteral
   | FloatLiteral
   | IntegerLiteral
-  | Identifier;
+  | BooleanLiteral
+  | Identifier
+  | ObjectLiteral
+  | ArrayLiteral;
 
 export type Annotations = ReadonlyArray<Annotation>;
 
@@ -175,7 +193,10 @@ export type Literal =
   | 'StringLiteral'
   | 'IntegerLiteral'
   | 'FloatLiteral'
-  | 'BooleanLiteral';
+  | 'BooleanLiteral'
+  | 'ObjectLiteralElement'
+  | 'ObjectLiteral'
+  | 'ArrayLiteral';
 
 export type Type =
   | 'UnionTypeNode'

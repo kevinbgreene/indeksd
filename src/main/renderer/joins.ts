@@ -1,5 +1,10 @@
 import * as ts from 'typescript';
-import { DatabaseDefinition, TableDefinition, TypeNode } from '../parser';
+import {
+  DatabaseDefinition,
+  FieldDefinition,
+  TableDefinition,
+  TypeNode,
+} from '../parser';
 import { definitionForIdentifier } from '../resolver';
 import { getItemNameForTable } from './common';
 import { getPrimaryKeyFieldForTable } from './keys';
@@ -35,6 +40,10 @@ export function getJoinsForTable(
   return result;
 }
 
+function isFieldOptional(field: FieldDefinition): boolean {
+  return field.required === false && field.defaultValue == null;
+}
+
 export function createItemTypeWithJoinsForTable(
   table: TableDefinition,
   database: DatabaseDefinition,
@@ -52,7 +61,7 @@ export function createItemTypeWithJoinsForTable(
           return ts.factory.createPropertySignature(
             undefined,
             ts.factory.createIdentifier(field.name.value),
-            field.required
+            isFieldOptional(field) == false
               ? undefined
               : ts.factory.createToken(ts.SyntaxKind.QuestionToken),
             typeNodeResolvingPrimaryKeys(field.type, database),
@@ -74,7 +83,7 @@ export function createItemTypeWithJoinsForTable(
             return ts.factory.createPropertySignature(
               undefined,
               ts.factory.createIdentifier(field.name.value),
-              field.required
+              isFieldOptional(field) == false
                 ? undefined
                 : ts.factory.createToken(ts.SyntaxKind.QuestionToken),
               typeNodeResolvingJoins(field.type, database),

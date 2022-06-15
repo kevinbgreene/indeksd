@@ -80,7 +80,7 @@ export function stubIdentifier(value: string): Identifier {
   return {
     kind: 'Identifier',
     value,
-    loc: emptyLocation(),
+    location: emptyLocation(),
   };
 }
 

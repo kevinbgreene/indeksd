@@ -25,7 +25,7 @@ database MyDatabase @version(3) {
   table Posts @item("Post") {
     @key postId: string;
     @index("name") @index("name_author") name: string;
-    content?: string;
+    content?: string = "";
     @index @index("name_author") author: Authors;
     @index status?: Status;
   }

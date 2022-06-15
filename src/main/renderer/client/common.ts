@@ -1,6 +1,6 @@
 import * as ts from 'typescript';
 import { COMMON_IDENTIFIERS } from '../identifiers';
-import { DatabaseDefinition, TableDefinition } from '../../parser';
+import { DatabaseDefinition, Expression, TableDefinition } from '../../parser';
 import { capitalize } from '../utils';
 import {
   getPrimaryKeyFieldForTable,
@@ -12,6 +12,7 @@ import { createConstStatement, createNewErrorWithMessage } from '../helpers';
 import { getItemTypeForTable } from '../common';
 import { createPushMethodCall } from '../observable';
 import { createNullType } from '../types';
+import { renderExpression } from '../expressions';
 
 export function clientTypeNameForTable(def: TableDefinition): string {
   return `${capitalize(def.name.value)}Client`;
@@ -215,12 +216,33 @@ export function createOnSuccessHandler(
   );
 }
 
+type DefaultValue = Readonly<{
+  propertyName: string;
+  initializer: Expression;
+}>;
+
+function getDefaultValueFields(
+  table: TableDefinition,
+): ReadonlyArray<DefaultValue> {
+  const result: Array<DefaultValue> = [];
+  for (const field of table.body) {
+    if (field.defaultValue != null) {
+      result.push({
+        propertyName: field.name.value,
+        initializer: field.defaultValue,
+      });
+    }
+  }
+  return result;
+}
+
 export function createAddRequestHandling(
   table: TableDefinition,
   database: DatabaseDefinition,
   methodName: 'put' | 'add',
 ): ReadonlyArray<ts.Statement> {
   const joins = getJoinsForTable(table, database);
+  const fieldsWithDefaultValues = getDefaultValueFields(table);
   const statements: Array<ts.Statement> = [];
   const requestName =
     methodName === 'put'
@@ -241,6 +263,28 @@ export function createAddRequestHandling(
           ts.factory.createObjectLiteralExpression(
             [
               ts.factory.createSpreadAssignment(COMMON_IDENTIFIERS.arg),
+              ...fieldsWithDefaultValues.map((next) => {
+                return ts.factory.createPropertyAssignment(
+                  next.propertyName,
+                  ts.factory.createConditionalExpression(
+                    ts.factory.createBinaryExpression(
+                      ts.factory.createPropertyAccessExpression(
+                        COMMON_IDENTIFIERS.arg,
+                        next.propertyName,
+                      ),
+                      ts.SyntaxKind.ExclamationEqualsToken,
+                      ts.factory.createNull(),
+                    ),
+                    undefined,
+                    ts.factory.createPropertyAccessExpression(
+                      COMMON_IDENTIFIERS.arg,
+                      next.propertyName,
+                    ),
+                    undefined,
+                    renderExpression(next.initializer),
+                  ),
+                );
+              }),
               ...joins.map((next) => {
                 return ts.factory.createPropertyAssignment(
                   next.fieldName,

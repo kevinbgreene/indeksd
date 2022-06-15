@@ -16,6 +16,10 @@ import {
   PropertySignature,
   TupleTypeNode,
   IntegerLiteral,
+  Expression,
+  ArrayLiteral,
+  ObjectLiteralElement,
+  ObjectLiteral,
 } from './types';
 
 import * as factory from '../factory';
@@ -40,11 +44,11 @@ function isStartOfDefinition(token: Token): boolean {
 
 class ParseError extends Error {
   public message: string;
-  public loc: TextLocation;
-  constructor(msg: string, loc: TextLocation) {
+  public location: TextLocation;
+  constructor(msg: string, location: TextLocation) {
     super(msg);
     this.message = msg;
-    this.loc = loc;
+    this.location = location;
   }
 }
 
@@ -120,12 +124,12 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     const location: TextLocation = factory.createTextLocation(
-      keywordToken.loc.start,
-      closeBrace.loc.end,
+      keywordToken.location.start,
+      closeBrace.location.end,
     );
 
     return factory.createDatabaseDefinition(
-      factory.createIdentifier(nameToken.text, nameToken.loc),
+      factory.createIdentifier(nameToken.text, nameToken.location),
       tables,
       location,
       annotations,
@@ -178,12 +182,12 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     const location: TextLocation = factory.createTextLocation(
-      keywordToken.loc.start,
-      closeBrace.loc.end,
+      keywordToken.location.start,
+      closeBrace.location.end,
     );
 
     return factory.createTableDefinition(
-      factory.createIdentifier(nameToken.text, nameToken.loc),
+      factory.createIdentifier(nameToken.text, nameToken.location),
       fields,
       annotations,
       location,
@@ -214,14 +218,14 @@ export function createParser(tokens: Array<Token>): Parser {
       'Field definition should end with semicolon',
     );
 
-    const endLoc: TextLocation = semicolon.loc;
+    const endLoc: TextLocation = semicolon.location;
     const location: TextLocation = factory.createTextLocation(
-      keywordToken.loc.start,
+      keywordToken.location.start,
       endLoc.end,
     );
 
     return factory.createTypeDefinition(
-      factory.createIdentifier(nameToken.text, nameToken.loc),
+      factory.createIdentifier(nameToken.text, nameToken.location),
       body,
       location,
     );
@@ -265,9 +269,12 @@ export function createParser(tokens: Array<Token>): Parser {
     const args = parseAnnotationArgs();
 
     return factory.createAnnotation(
-      factory.createIdentifier(nameToken.text, nameToken.loc),
+      factory.createIdentifier(nameToken.text, nameToken.location),
       args,
-      factory.createTextLocation(atToken.loc.start, nameToken.loc.end),
+      factory.createTextLocation(
+        atToken.location.start,
+        nameToken.location.end,
+      ),
     );
   }
 
@@ -286,10 +293,10 @@ export function createParser(tokens: Array<Token>): Parser {
       if (arg) {
         switch (arg.kind) {
           case 'StringLiteral':
-            args.push(createStringLiteral(arg.text, arg.loc));
+            args.push(createStringLiteral(arg.text, arg.location));
             break;
           case 'IntegerLiteral':
-            args.push(createIntegerLiteral(arg.text, arg.loc));
+            args.push(createIntegerLiteral(arg.text, arg.location));
             break;
         }
       }
@@ -328,9 +335,9 @@ export function createParser(tokens: Array<Token>): Parser {
     return fields;
   }
 
-  // Field → ?Annotation Identifier ':' TypeNode ';'
+  // Field → ?Annotation Identifier ':' TypeNode ?('=' Expression) ';'
   function parseFieldDefinition(): FieldDefinition {
-    const startLoc: TextLocation = currentToken().loc;
+    const startLoc: TextLocation = currentToken().location;
     const annotations: ReadonlyArray<Annotation> = parseAnnotations();
     const _nameToken: Token | null = consume('Identifier');
     const nameToken: Token = requireValue(
@@ -345,13 +352,16 @@ export function createParser(tokens: Array<Token>): Parser {
     requireValue(colonToken, 'Type annotation expected for field');
 
     const type: TypeNode = parseTypeNode();
+
+    const defaultValue = parseDefaultValue();
+
     const _semicolon: Token | null = consume('SemicolonToken');
     const semicolon: Token = requireValue(
       _semicolon,
       'Field definition should end with semicolon',
     );
 
-    const endLoc: TextLocation = semicolon.loc;
+    const endLoc: TextLocation = semicolon.location;
 
     const location: TextLocation = factory.createTextLocation(
       startLoc.start,
@@ -359,10 +369,142 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     return factory.createFieldDefinition(
-      factory.createIdentifier(nameToken.text, nameToken.loc),
+      factory.createIdentifier(nameToken.text, nameToken.location),
       required,
       annotations,
       type,
+      defaultValue,
+      location,
+    );
+  }
+
+  function parseDefaultValue(): Expression | null {
+    const equalToken = consume('EqualToken');
+    if (equalToken == null) {
+      return null;
+    }
+
+    return parseExpression();
+  }
+
+  function parseExpression(): Expression {
+    const token = currentToken();
+    switch (token.kind) {
+      case 'StringLiteral':
+        const str = requireValue(consume('StringLiteral'), `Expected string`);
+        return factory.createStringLiteral(str.text, str.location);
+      case 'IntegerLiteral':
+        const int = requireValue(consume('IntegerLiteral'), `Expected integer`);
+        return factory.createIntegerLiteral(int.text, int.location);
+      case 'FloatLiteral':
+        const float = requireValue(consume('FloatLiteral'), `Expected float`);
+        return factory.createFloatLiteral(float.text, float.location);
+      case 'BooleanLiteral':
+        const bool = requireValue(
+          consume('BooleanLiteral'),
+          `Expected boolean`,
+        );
+        return factory.createStringLiteral(bool.text, bool.location);
+      case 'LeftBracketToken':
+        return parseArrayLiteral();
+      case 'LeftBraceToken':
+        return parseObjectLiteral();
+      default:
+        throw new Error(`Unknown expression kind ${token.kind}`);
+    }
+  }
+
+  function parseArrayLiteral(): ArrayLiteral {
+    const _openBracket: Token | null = consume('LeftBracketToken');
+    const openBracket: Token = requireValue(
+      _openBracket,
+      `Unable to find opening bracket for array literal`,
+    );
+
+    const items = [];
+
+    while (!check('RightBracketToken')) {
+      items.push(parseExpression());
+
+      if (isStartOfDefinition(currentToken())) {
+        throw reportError(`Closing bracket expected, but new statement found`);
+      } else if (check('EOF')) {
+        throw reportError(`Closing bracket expected but reached end of file`);
+      }
+    }
+
+    const _closeBracket: Token | null = consume('RightBracketToken');
+    const closeBracket: Token = requireValue(
+      _closeBracket,
+      `Unable to find closing bracket for array literal`,
+    );
+
+    const location = factory.createTextLocation(
+      openBracket.location.start,
+      closeBracket.location.end,
+    );
+
+    return factory.createArrayLiteral(items, location);
+  }
+
+  function parseObjectLiteral(): ObjectLiteral {
+    const _openBrace: Token | null = consume('LeftBraceToken');
+    const openBrace: Token = requireValue(
+      _openBrace,
+      `Unable to find opening brace for object literal`,
+    );
+
+    const elements = [];
+
+    while (!check('RightBraceToken')) {
+      elements.push(parseObjectLiteralElement());
+      consume('CommaToken');
+
+      if (isStartOfDefinition(currentToken())) {
+        throw reportError(
+          `Closing curly brace expected, but new statement found`,
+        );
+      } else if (check('EOF')) {
+        throw reportError(
+          `Closing curly brace expected but reached end of file`,
+        );
+      }
+    }
+
+    const _closeBrace: Token | null = consume('RightBraceToken');
+    const closeBrace: Token = requireValue(
+      _closeBrace,
+      `Unable to find closing brace for object literal`,
+    );
+
+    const location = factory.createTextLocation(
+      openBrace.location.start,
+      closeBrace.location.end,
+    );
+
+    return factory.createObjectLiteral(elements, location);
+  }
+
+  function parseObjectLiteralElement(): ObjectLiteralElement {
+    const _name = consume('Identifier');
+    const name = requireValue(
+      _name,
+      `Expected a name for object literal element`,
+    );
+
+    const colon = consume('ColonToken');
+    requireValue(colon, `Expected colon separator in object literal`);
+
+    const value = parseExpression();
+
+    const location = factory.createTextLocation(
+      name.location.start,
+      value.location.end,
+    );
+
+    return factory.createObjectLiteralElement(
+      factory.createIdentifier(name.text, name.location),
+      value,
       location,
     );
   }
@@ -402,31 +544,37 @@ export function createParser(tokens: Array<Token>): Parser {
       case 'StringKeyword':
       case 'NumberKeyword':
         advance();
-        return factory.createKeywordFieldType(typeToken.kind, typeToken.loc);
+        return factory.createKeywordFieldType(
+          typeToken.kind,
+          typeToken.location,
+        );
 
       case 'StringLiteral':
         advance();
-        return factory.createStringLiteral(typeToken.text, typeToken.loc);
+        return factory.createStringLiteral(typeToken.text, typeToken.location);
 
       case 'IntegerLiteral':
         if (peek().kind === 'DotDotToken') {
           return parseRangeTypeNode();
         } else {
           advance();
-          return factory.createIntegerLiteral(typeToken.text, typeToken.loc);
+          return factory.createIntegerLiteral(
+            typeToken.text,
+            typeToken.location,
+          );
         }
 
       case 'FloatLiteral':
         advance();
-        return factory.createFloatLiteral(typeToken.text, typeToken.loc);
+        return factory.createFloatLiteral(typeToken.text, typeToken.location);
 
       case 'TrueKeyword':
         advance();
-        return factory.createBooleanLiteral(true, typeToken.loc);
+        return factory.createBooleanLiteral(true, typeToken.location);
 
       case 'FalseKeyword':
         advance();
-        return factory.createBooleanLiteral(false, typeToken.loc);
+        return factory.createBooleanLiteral(false, typeToken.location);
 
       default:
         throw reportError(`TypeNode expected but found: ${typeToken.kind}`);
@@ -454,8 +602,8 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     const location = factory.createTextLocation(
-      openBracket.loc.start,
-      closeBracket.loc.end,
+      openBracket.location.start,
+      closeBracket.location.end,
     );
 
     return factory.createTupleTypeNode(members, location);
@@ -483,8 +631,8 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     const location = factory.createTextLocation(
-      openBrace.loc.start,
-      closeBrace.loc.end,
+      openBrace.location.start,
+      closeBrace.location.end,
     );
 
     return factory.createObjectLiteralTypeNode(members, location);
@@ -512,12 +660,12 @@ export function createParser(tokens: Array<Token>): Parser {
     );
 
     const location = factory.createTextLocation(
-      nameToken.loc.start,
-      semicolon.loc.end,
+      nameToken.location.start,
+      semicolon.location.end,
     );
 
     return factory.createPropertySignature(
-      factory.createIdentifier(nameToken.text, nameToken.loc),
+      factory.createIdentifier(nameToken.text, nameToken.location),
       type,
       location,
     );
@@ -535,13 +683,13 @@ export function createParser(tokens: Array<Token>): Parser {
     const endValue = requireValue(_endValue, 'Expected end value for range');
 
     const location = factory.createTextLocation(
-      startValue.loc.start,
-      endValue.loc.end,
+      startValue.location.start,
+      endValue.location.end,
     );
 
     return factory.createRangeTypeNode(
-      factory.createIntegerLiteral(startValue.text, startValue.loc),
-      factory.createIntegerLiteral(endValue.text, endValue.loc),
+      factory.createIntegerLiteral(startValue.text, startValue.location),
+      factory.createIntegerLiteral(endValue.text, endValue.location),
       location,
     );
   }
@@ -580,12 +728,12 @@ export function createParser(tokens: Array<Token>): Parser {
     }
 
     const location: TextLocation = {
-      start: nameToken.loc.start,
-      end: endToken.loc.end,
+      start: nameToken.location.start,
+      end: endToken.location.end,
     };
 
     return factory.createTypeReferenceNode(
-      factory.createIdentifier(nameToken.text, nameToken.loc),
+      factory.createIdentifier(nameToken.text, nameToken.location),
       typeArgs,
       location,
     );
@@ -657,7 +805,7 @@ export function createParser(tokens: Array<Token>): Parser {
   // }
 
   function reportError(msg: string): Error {
-    return new ParseError(msg, currentToken().loc);
+    return new ParseError(msg, currentToken().location);
   }
 
   // Throw if the given value doesn't exist.

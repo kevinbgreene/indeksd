@@ -20,14 +20,14 @@ export type Status = {
 export type Post = {
   postId: string;
   name: string;
-  content?: string;
+  content: string;
   author: number;
   status?: string;
 };
 export type PostWithJoins = {
   postId: string;
   name: string;
-  content?: string;
+  content: string;
   author: Authors;
   status?: Status;
 };
@@ -1290,6 +1290,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         }
         const DBAddRequest: IDBRequest = store.add({
           ...arg,
+          content: arg.content != null ? arg.content : '',
           author: authorsId,
           status: statusId,
         });
@@ -1382,6 +1383,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
         }
         const DBPutRequest: IDBRequest = store.put({
           ...arg,
+          content: arg.content != null ? arg.content : '',
           author: authorsId,
           status: statusId,
         });
@@ -2154,10 +2156,9 @@ export function init(): Promise<MyDatabaseClient> {
       });
       const StatusStore = createObjectStore(db, 'Status', { keyPath: 'id' });
       const PostsStore = createObjectStore(db, 'Posts', { keyPath: 'postId' });
-      removeUnusedIndexes(AuthorsStore, ['id', 'name', 'email']);
-      removeUnusedIndexes(StatusStore, ['id']);
+      removeUnusedIndexes(AuthorsStore, ['name', 'email']);
+      removeUnusedIndexes(StatusStore, []);
       removeUnusedIndexes(PostsStore, [
-        'postId',
         'name',
         'name_author',
         'author',

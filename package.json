@@ -3,6 +3,7 @@
   "version": "0.0.16",
   "description": "A DSL for defining IndexedDB schemas that compile into a type safe database client.",
   "main": "./dist/main/index.js",
+  "types": "./dist/main/index.d.ts",
   "bin": {
     "indeksd": "./dist/main/bin/index.js"
   },
@@ -43,6 +44,6 @@
     "fs-extra": "^10.0.1",
     "glob": "^7.2.0",
     "prettier": "^2.6.2",
-    "typescript": "^4.6.2"
+    "typescript": "^4.7.3"
   }
 }

@@ -19,18 +19,6 @@ const hasMore: boolean = page.hasMore();
 
 Create a validator and debugger that will show the user exactly where an error occurred (without confusion stack trace) and suggest how to fix it.
 
-- **Support Defaults** Ability to declare defaults in the schema.
-
-```
-database TodoDatabase {
-  table Todos {
-    @autoincrement id: number;
-    name: string;
-    complete: boolean = false;
-  }
-}
-```
-
 - **Cursor Support**
 
 - **Advanced Search** Support applying more complex predicates to table searches.

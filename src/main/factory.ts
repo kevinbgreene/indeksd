@@ -22,14 +22,18 @@ import {
   PropertySignature,
   ObjectLiteralTypeNode,
   TupleTypeNode,
+  Expression,
+  ObjectLiteral,
+  ObjectLiteralElement,
+  ArrayLiteral,
 } from './parser/types';
 
 export function createToken(
   kind: SyntaxKind,
   text: string,
-  loc: TextLocation,
+  location: TextLocation,
 ): Token {
-  return { kind, text, loc };
+  return { kind, text, location };
 }
 
 export function createDatabaseSchema(
@@ -52,7 +56,7 @@ export function createDatabaseDefinition(
     name,
     body: tables,
     annotations,
-    loc: location,
+    location,
   };
 }
 
@@ -67,7 +71,7 @@ export function createTableDefinition(
     name,
     body,
     annotations,
-    loc: location,
+    location,
   };
 }
 
@@ -80,7 +84,7 @@ export function createTypeDefinition(
     kind: 'TypeDefinition',
     name,
     body,
-    loc: location,
+    location,
   };
 }
 
@@ -93,7 +97,42 @@ export function createAnnotation(
     kind: 'Annotation',
     name,
     arguments: args,
-    loc: location,
+    location,
+  };
+}
+
+export function createArrayLiteral(
+  items: ReadonlyArray<Expression>,
+  location: TextLocation,
+): ArrayLiteral {
+  return {
+    kind: 'ArrayLiteral',
+    items,
+    location,
+  };
+}
+
+export function createObjectLiteral(
+  elements: ReadonlyArray<ObjectLiteralElement>,
+  location: TextLocation,
+): ObjectLiteral {
+  return {
+    kind: 'ObjectLiteral',
+    elements,
+    location,
+  };
+}
+
+export function createObjectLiteralElement(
+  key: Identifier,
+  value: Expression,
+  location: TextLocation,
+): ObjectLiteralElement {
+  return {
+    kind: 'ObjectLiteralElement',
+    key,
+    value,
+    location,
   };
 }
 
@@ -102,6 +141,7 @@ export function createFieldDefinition(
   required: boolean,
   annotations: ReadonlyArray<Annotation>,
   type: TypeNode,
+  defaultValue: Expression | null,
   location: TextLocation,
 ): FieldDefinition {
   return {
@@ -110,19 +150,23 @@ export function createFieldDefinition(
     required,
     annotations,
     type,
-    loc: location,
+    defaultValue,
+    location,
   };
 }
 
-export function createIdentifier(value: string, loc: TextLocation): Identifier {
-  return { kind: 'Identifier', value, loc };
+export function createIdentifier(
+  value: string,
+  location: TextLocation,
+): Identifier {
+  return { kind: 'Identifier', value, location };
 }
 
 export function createKeywordFieldType(
   kind: KeywordType,
-  loc: TextLocation,
+  location: TextLocation,
 ): KeywordTypeNode {
-  return { kind, loc };
+  return { kind, location };
 }
 
 export function createTextLocation(
@@ -135,92 +179,92 @@ export function createTextLocation(
 export function createRangeTypeNode(
   startValue: IntegerLiteral,
   endValue: IntegerLiteral,
-  loc: TextLocation,
+  location: TextLocation,
 ): RangeTypeNode {
   return {
     kind: 'RangeTypeNode',
     startValue,
     endValue,
-    loc,
+    location,
   };
 }
 
 export function createObjectLiteralTypeNode(
   members: ReadonlyArray<PropertySignature>,
-  loc: TextLocation,
+  location: TextLocation,
 ): ObjectLiteralTypeNode {
   return {
     kind: 'ObjectLiteralTypeNode',
     members,
-    loc,
+    location,
   };
 }
 
 export function createPropertySignature(
   name: Identifier,
   type: TypeNode,
-  loc: TextLocation,
+  location: TextLocation,
 ): PropertySignature {
   return {
     kind: 'PropertySignature',
     name,
     type,
-    loc,
+    location,
   };
 }
 
 export function createTupleTypeNode(
   members: ReadonlyArray<TypeNode>,
-  loc: TextLocation,
+  location: TextLocation,
 ): TupleTypeNode {
   return {
     kind: 'TupleTypeNode',
     members,
-    loc,
+    location,
   };
 }
 
 export function createTypeReferenceNode(
   name: Identifier,
   typeArgs: ReadonlyArray<TypeNode>,
-  loc: TextLocation,
+  location: TextLocation,
 ): TypeReferenceNode {
   return {
     kind: 'TypeReferenceNode',
     name,
     typeArgs,
-    loc,
+    location,
   };
 }
 
 export function createBooleanLiteral(
   value: boolean,
-  loc: TextLocation,
+  location: TextLocation,
 ): BooleanLiteral {
-  return { kind: 'BooleanLiteral', value, loc };
+  return { kind: 'BooleanLiteral', value, location };
 }
 
 export function createStringLiteral(
   value: string,
-  loc: TextLocation,
+  location: TextLocation,
 ): StringLiteral {
   return {
     kind: 'StringLiteral',
     value,
-    loc,
+    location,
   };
 }
 
 export function createIntegerLiteral(
   value: string,
-  loc: TextLocation,
+  location: TextLocation,
 ): IntegerLiteral {
-  return { kind: 'IntegerLiteral', value, loc };
+  return { kind: 'IntegerLiteral', value, location };
 }
 
 export function createFloatLiteral(
   value: string,
-  loc: TextLocation,
+  location: TextLocation,
 ): FloatLiteral {
-  return { kind: 'FloatLiteral', value, loc };
+  return { kind: 'FloatLiteral', value, location };
 }
