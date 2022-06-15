@@ -131,6 +131,42 @@ database Blog @version(1) {
 
 This schema defines a Blog database with version 1. A table "Posts" where every entry in the table is a "Post". The primary key is the "id" field and it is an autoincrement field. Two indexes are defined, one "title" and one "title_author". The "title_author" index is a compound index allowing us to search by both the title and author fields. The title for each entry must also be unique.
 
+## Default Values
+
+It is possible to define default values for fields in the schema. For example, if in our blog application we create an entry in the DB once the user creates a title, but before they write any body content we would default the body content to an empty string to avoid needing to set that explicitly.
+
+```
+database Blog @version(1) {
+  table Posts @item("Post") {
+    @autoincrement id: number;
+    @index @index("title_author") @unique title: string;
+    content: string = "";
+    @index("title_author") author: string;
+  }
+}
+```
+
+### Implications for Generated Code
+
+Default values are enforced on write. This results in the fields with defaults being optional on write, but being required on read.
+
+```
+export type Post = {
+  id: number;
+  title: string;
+  content: string;
+  author: string;
+};
+export type PostAddArgs = {
+  id: number;
+  title: string;
+  content?: string;
+  author: string;
+};
+```
+
+Default values are actually saved to the DB at the time of write for fields where data is not provided.
+
 ## Automated Joins
 
 IndexedDB is a document store meaning that it stores objects and not the tables we find in relational databases where join operations are common. In document stores sometimes we store redundant data in the name of keeping things simple. However, sometimes it does make sense to eliminate the redundancy.
