@@ -206,7 +206,7 @@ export function createObservableClass(): ts.ClassDeclaration {
         ts.factory.createBlock(
           [
             ts.factory.createExpressionStatement(
-              ts.factory.createCallExpression(
+              ts.factory.createCallChain(
                 ts.factory.createPropertyAccessChain(
                   ts.factory.createCallExpression(
                     ts.factory.createPropertyAccessExpression(
@@ -222,12 +222,13 @@ export function createObservableClass(): ts.ClassDeclaration {
                   ts.factory.createToken(ts.SyntaxKind.QuestionDotToken),
                   COMMON_IDENTIFIERS.forEach,
                 ),
+                ts.factory.createToken(ts.SyntaxKind.QuestionDotToken),
                 undefined,
                 [createNotifyListenersFunction()],
               ),
             ),
             ts.factory.createExpressionStatement(
-              ts.factory.createCallExpression(
+              ts.factory.createCallChain(
                 ts.factory.createPropertyAccessChain(
                   ts.factory.createCallExpression(
                     ts.factory.createPropertyAccessExpression(
@@ -243,6 +244,7 @@ export function createObservableClass(): ts.ClassDeclaration {
                   ts.factory.createToken(ts.SyntaxKind.QuestionDotToken),
                   COMMON_IDENTIFIERS.forEach,
                 ),
+                ts.factory.createToken(ts.SyntaxKind.QuestionDotToken),
                 undefined,
                 [createNotifyListenersFunction()],
               ),
@@ -362,7 +364,7 @@ function createSubscribeMethodDeclaration(): ts.MethodDeclaration {
           ts.factory.createBlock(
             [
               ts.factory.createExpressionStatement(
-                ts.factory.createCallExpression(
+                ts.factory.createCallChain(
                   ts.factory.createPropertyAccessChain(
                     ts.factory.createCallExpression(
                       ts.factory.createPropertyAccessExpression(
@@ -378,6 +380,7 @@ function createSubscribeMethodDeclaration(): ts.MethodDeclaration {
                     ts.factory.createToken(ts.SyntaxKind.QuestionDotToken),
                     COMMON_IDENTIFIERS.set,
                   ),
+                  ts.factory.createToken(ts.SyntaxKind.QuestionDotToken),
                   undefined,
                   [
                     ts.factory.createPropertyAccessExpression(
