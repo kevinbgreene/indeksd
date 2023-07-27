@@ -477,7 +477,7 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
       callback: (event: SubscriptionEvent<ItemType, PrimaryKeyType>) => void,
     ): void {
       if (this.#listeners.has(eventName)) {
-        this.#listeners.get(eventName)?.set(this.#nextId, callback);
+        this.#listeners.get(eventName)?.set?.(this.#nextId, callback);
       } else {
         const innerMap: Map<
           number,
@@ -494,13 +494,13 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
       eventName: 'add' | 'put' | 'delete',
       data: ItemType | PrimaryKeyType,
     ): void {
-      this.#listeners.get('change')?.forEach((callback) => {
+      this.#listeners.get('change')?.forEach?.((callback) => {
         callback({ type: eventName, data } as SubscriptionEvent<
           ItemType,
           PrimaryKeyType
         >);
       });
-      this.#listeners.get(eventName)?.forEach((callback) => {
+      this.#listeners.get(eventName)?.forEach?.((callback) => {
         callback({ type: eventName, data } as SubscriptionEvent<
           ItemType,
           PrimaryKeyType
@@ -878,8 +878,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             break;
           }
           default: {
-            return Promise.reject(
-              new Error('Trying to run query on unknown index: ' + indexName),
+            throw new Error(
+              'Trying to run query on unknown index: ' + indexName,
             );
           }
         }
@@ -1191,8 +1191,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             break;
           }
           default: {
-            return Promise.reject(
-              new Error('Trying to run query on unknown index: ' + indexName),
+            throw new Error(
+              'Trying to run query on unknown index: ' + indexName,
             );
           }
         }
@@ -2036,8 +2036,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             break;
           }
           default: {
-            return Promise.reject(
-              new Error('Trying to run query on unknown index: ' + indexName),
+            throw new Error(
+              'Trying to run query on unknown index: ' + indexName,
             );
           }
         }

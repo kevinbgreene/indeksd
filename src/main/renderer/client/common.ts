@@ -571,18 +571,14 @@ function createHandlingForTableJoin(join: TableJoin): ts.Expression {
   );
 }
 
-export function createDefaultClauseForIndexHandling(): ts.DefaultClause {
+export function createDefaultClauseForIndexHandling(
+  method: 'reject' | 'throw',
+): ts.DefaultClause {
   return ts.factory.createDefaultClause([
     ts.factory.createBlock(
       [
-        ts.factory.createReturnStatement(
-          ts.factory.createCallExpression(
-            ts.factory.createPropertyAccessExpression(
-              COMMON_IDENTIFIERS.Promise,
-              COMMON_IDENTIFIERS.reject,
-            ),
-            undefined,
-            [
+        method === 'throw'
+          ? ts.factory.createThrowStatement(
               createNewErrorWithMessage(
                 ts.factory.createBinaryExpression(
                   ts.factory.createStringLiteral(
@@ -592,9 +588,27 @@ export function createDefaultClauseForIndexHandling(): ts.DefaultClause {
                   COMMON_IDENTIFIERS.indexName,
                 ),
               ),
-            ],
-          ),
-        ),
+            )
+          : ts.factory.createReturnStatement(
+              ts.factory.createCallExpression(
+                ts.factory.createPropertyAccessExpression(
+                  COMMON_IDENTIFIERS.Promise,
+                  COMMON_IDENTIFIERS.reject,
+                ),
+                undefined,
+                [
+                  createNewErrorWithMessage(
+                    ts.factory.createBinaryExpression(
+                      ts.factory.createStringLiteral(
+                        'Trying to run query on unknown index: ',
+                      ),
+                      ts.SyntaxKind.PlusToken,
+                      COMMON_IDENTIFIERS.indexName,
+                    ),
+                  ),
+                ],
+              ),
+            ),
       ],
       true,
     ),
