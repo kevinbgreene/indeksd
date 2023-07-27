@@ -354,7 +354,7 @@ function createRangeQueryMethodImplementation({
                 ],
               );
             }),
-            createDefaultClauseForIndexHandling(),
+            createDefaultClauseForIndexHandling('reject'),
           ]),
         ),
       ],

@@ -878,8 +878,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             break;
           }
           default: {
-            return Promise.reject(
-              new Error('Trying to run query on unknown index: ' + indexName),
+            throw new Error(
+              'Trying to run query on unknown index: ' + indexName,
             );
           }
         }
@@ -1191,8 +1191,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             break;
           }
           default: {
-            return Promise.reject(
-              new Error('Trying to run query on unknown index: ' + indexName),
+            throw new Error(
+              'Trying to run query on unknown index: ' + indexName,
             );
           }
         }
@@ -2036,8 +2036,8 @@ function createDatabaseClient(db: IDBDatabase): MyDatabaseClient {
             break;
           }
           default: {
-            return Promise.reject(
-              new Error('Trying to run query on unknown index: ' + indexName),
+            throw new Error(
+              'Trying to run query on unknown index: ' + indexName,
             );
           }
         }

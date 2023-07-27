@@ -222,7 +222,7 @@ function createIndexHandling(
             ],
           );
         }),
-        createDefaultClauseForIndexHandling(),
+        createDefaultClauseForIndexHandling('throw'),
       ]),
     ),
   ];
